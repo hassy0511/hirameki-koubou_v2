@@ -204,6 +204,41 @@ for (const lineId of core.LINE_ORDER) {
   }
 }
 
+// 置いてある数と答えがちょうど同じだと、全部タップするだけで正解になる。
+assert(/selectAllIsTheAnswer/.test(appSource), '盤面のタップ対象が答えの数ちょうどになるのを防いでいません');
+
+// 計算のステージでは、答えが問題文や操作説明に書かれていないこと。
+// (引き算の導入2問は「とる」操作そのものなので、割合で見る)
+for (const [lineId, limit] of [['number', 0.05], ['addition', 0.05], ['subtraction', 0.3]]) {
+  for (let stageIndex = 0; stageIndex < 11; stageIndex += 1) {
+    let visible = 0;
+    let total = 0;
+    for (const seed of [6001, 6002, 6003, 6004]) {
+      core.makeStageQuestions(lineId, stageIndex, { seed: seed + stageIndex }).questions.forEach(question => {
+        const answer = Number(question.correct);
+        if (!Number.isFinite(answer)) return;
+        total += 1;
+        const shown = value => new RegExp('(^|[^0-9])' + value + '([^0-9]|$)');
+        if (shown(answer).test(String(question.prompt)) || shown(answer).test(String(question.instruction))) visible += 1;
+      });
+    }
+    if (!total) continue;
+    assert(visible / total <= limit, lineId + '/' + stageIndex + ': 答えが問題文か操作説明に見えている問題が多すぎます (' + Math.round(visible / total * 100) + '%)');
+  }
+}
+
+// 形の問題で、例える物の名前に答えの語が入っていないこと。
+for (const stageIndex of [0, 3]) {
+  for (const seed of [6101, 6102, 6103]) {
+    core.makeStageQuestions('shape', stageIndex, { seed }).questions.forEach(question => {
+      const answer = String(question.correct);
+      if (answer.length < 2) return;
+      assert(!String(question.prompt).includes(answer) || (question.options || []).every(option => String(core.optionValue(option)).length && String(question.prompt).includes(String(core.optionValue(option)))),
+        'shape/' + stageIndex + ': 物の名前に答えの語が入っています → ' + question.prompt + ' → ' + answer);
+    });
+  }
+}
+
 const expressionPacks = [
   core.makeStageQuestions('solve', 6, { seed: 551 }),
   core.makeStageQuestions('solve', 8, { seed: 552 })

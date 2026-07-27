@@ -345,7 +345,7 @@
   const SHAPE_FACE_CASES = [
     { name: 'ティッシュの はこの そこ', icon: '▣', face: 'しかく' },
     { name: 'さいころの めん', icon: '▦', face: 'しかく' },
-    { name: 'しかくい ブロックの めん', icon: '▣', face: 'しかく' },
+    { name: 'つみきの ブロックの めん', icon: '▣', face: 'しかく' },
     { name: 'ちいさい はこの そこ', icon: '▣', face: 'しかく' },
     { name: 'けしゴムの ひらたい めん', icon: '▣', face: 'しかく' },
     { name: 'えほんの おもて', icon: '▣', face: 'しかく' },
@@ -355,12 +355,12 @@
     { name: 'かんの そこ', icon: '▥', face: 'まる' },
     { name: 'かみの つつの はし', icon: '▥', face: 'まる' },
     { name: 'テープの しんの はし', icon: '▥', face: 'まる' },
-    { name: 'まるい コップの そこ', icon: '▥', face: 'まる' },
+    { name: 'コップの そこ', icon: '▥', face: 'まる' },
     { name: 'ペットボトルの ふた', icon: '▥', face: 'まる' },
-    { name: 'まるい のりの そこ', icon: '▥', face: 'まる' },
+    { name: 'スティックのりの そこ', icon: '▥', face: 'まる' },
     { name: 'トイレットペーパーの はし', icon: '▥', face: 'まる' },
     { name: 'びんの そこ', icon: '▥', face: 'まる' },
-    { name: 'まるい おさらの そこ', icon: '▥', face: 'まる' }
+    { name: 'おさらの そこ', icon: '▥', face: 'まる' }
   ];
 
   function selectorQuestion(target, total, config, rng) {
@@ -489,7 +489,11 @@
     }
     if (stageIndex === 5) {
       const target = pick([5, 6, 7, 8, 9, 10], rng);
-      const known = rand(0, target, rng);
+      // 「いま0こ」だと、あといくつ＝目標の数になり、答えが問題文にそのまま出る。
+      // 0を学ぶのは「あと0こ」(すでに いっぱい)の側なので、そちらは残す。
+      let known = rand(1, target, rng);
+      // あといくつ＝いまの数、になると答えが問題文にそのまま出る
+      if (target - known === known && known > 1) known -= 1;
       const missing = target - known;
       return numericQuestion({
         canonicalSkillId: NUMBER_STAGES[5].canonicalSkillId,
@@ -538,10 +542,18 @@
       }, rng);
     }
     if (stageIndex === 7) {
-      const row = shuffle(['1', '2', '3', '4', '5'], rng);
+      let row = shuffle(['1', '2', '3', '4', '5'], rng);
       const fromRight = round % 2 === 1;
       const ordinal = rand(1, 5, rng);
       const index = fromRight ? row.length - ordinal : ordinal - 1;
+      // 「3ばんめ」の答えが札の「3」だと、数えずに数字を合わせるだけで当たる
+      if (row[index] === String(ordinal)) {
+        const swapWith = (index + 1) % row.length;
+        row = row.slice();
+        const keep = row[index];
+        row[index] = row[swapWith];
+        row[swapWith] = keep;
+      }
       return finalizeQuestion({
         canonicalSkillId: NUMBER_STAGES[7].canonicalSkillId,
         kind: 'choice',
@@ -718,7 +730,10 @@
     }
     if (stageIndex === 1) {
       const target = pick([5, 7, 10], rng);
-      const known = rand(0, target, rng);
+      // 「いま0こ」は答えが目標の数、「あと＝いま」は答えがいまの数。
+      // どちらも答えが問題文にそのまま出るので避ける。
+      let known = rand(1, target, rng);
+      if (target - known === known && known > 1) known -= 1;
       const correct = target - known;
       return numericQuestion({
         canonicalSkillId: ADDITION_STAGES[1].canonicalSkillId,
@@ -920,7 +935,9 @@
     }
     if (stageIndex === 0) {
       const target = pick([5, 7, 10], rng);
-      const left = rand(0, target, rng);
+      // 二つが同じ数だと、片方を読むだけで答えが分かってしまう
+      let left = rand(1, target - 1, rng);
+      if (target - left === left && left > 1) left -= 1;
       const right = target - left;
       return numericQuestion({
         canonicalSkillId: SUBTRACTION_STAGES[0].canonicalSkillId,
@@ -1415,7 +1432,12 @@
       }, rng);
     }
     if (stageIndex === 3) {
-      const item = pick(SHAPE_FACE_CASES, rng);
+      // 物の名前に答えの語(まる・しかく)が入っていると、形を見ずに字を合わせるだけで解ける
+      const faceWords = ['まる', 'さんかく', 'しかく'];
+      const safeFaces = SHAPE_FACE_CASES.filter(function (entry) {
+        return !faceWords.some(function (word) { return entry.name.includes(word); });
+      });
+      const item = pick(safeFaces.length ? safeFaces : SHAPE_FACE_CASES, rng);
       return finalizeQuestion({
         canonicalSkillId: SHAPE_STAGES[3].canonicalSkillId,
         kind: 'choice',

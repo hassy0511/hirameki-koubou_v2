@@ -704,6 +704,12 @@
     if (visual.type === 'ten-bundle-remove') total = visual.a;
     if (visual.type === 'unit-length') total = visual.count;
     total = Math.max(Number(question.correct) || 0, Math.min(20, Number(total) || 10));
+    // 置いてある数と答えがちょうど同じだと、全部タップするだけで正解になる。
+    // 「ぜんぶ とる」ように、全部えらぶこと自体が答えの問題だけは そのままにする。
+    const selectAllIsTheAnswer = question.kind === 'remove' && Number(visual.total || visual.a || 0) === Number(question.correct);
+    if (!selectAllIsTheAnswer && total === Number(question.correct)) {
+      total = Math.min(20, total + Math.max(2, Math.ceil(total / 3)));
+    }
     const selected = new Set(question.selected || []);
     const targetGuide = visual.type === 'sticks' ? '<div class="stick-target stick-target--' + Number(visual.materialVariant || 0) + '"><small>つくる かたち</small><strong>' + childText(visual.diagram || visual.target) + '</strong><span>' + childText(visual.target) + '</span></div>' : '';
     return targetGuide + '<div class="selectable-grid" style="' + lineStyle(line) + '">' + repeat(total, function (index) {
