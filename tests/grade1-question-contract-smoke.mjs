@@ -239,6 +239,57 @@ for (const stageIndex of [0, 3]) {
   }
 }
 
+// 小1の画面に出る文は、問題文もヒントも解説も同じ表記でそろえる。
+// つまずいた子がいちばん読むヒントに、読めない漢字を残さない。
+const READABLE_KANJI = /[数分合見同進式列針角増減何動空表次多十左右回大向板使入話短先後低取出間人形計]/;
+for (const lineId of core.LINE_ORDER) {
+  for (let stageIndex = 0; stageIndex < 11; stageIndex += 1) {
+    for (const seed of [7001, 7002]) {
+      core.makeStageQuestions(lineId, stageIndex, { seed: seed + stageIndex }).questions.forEach(question => {
+        [['問題文', question.prompt], ['ヒント', question.hint], ['解説', question.explain], ['やること', question.instruction]].forEach(([label, text]) => {
+          const found = String(text || '').match(READABLE_KANJI);
+          assert(!found, lineId + '/' + stageIndex + ': ' + label + 'に小1が読めない漢字「' + (found && found[0]) + '」があります → ' + text);
+        });
+      });
+    }
+  }
+}
+
+// 問われ方と答え方が食い違わないこと。
+for (const seed of [7101, 7102, 7103]) {
+  core.makeStageQuestions('number', 1, { seed }).questions.forEach(question => {
+    if (String(question.correct) !== 'おなじ') return;
+    assert(!/おおいのは/.test(question.prompt), 'かず/1: 「おおいのは どっち？」の答えが「おなじ」になっています');
+  });
+  core.makeStageQuestions('shape', 1, { seed }).questions.forEach(question => {
+    const options = (question.options || []).map(option => String(core.optionValue(option)));
+    options.forEach(option => {
+      assert(String(question.prompt).includes(option), 'かたち/1: 選べる答え「' + option + '」が問題文で示されていません');
+    });
+  });
+}
+
+// 小1に、答えの出ない引き算の式を見せないこと。
+for (const stageIndex of [6, 8]) {
+  for (const seed of [7201, 7202]) {
+    core.makeStageQuestions('solve', stageIndex, { seed }).questions.forEach(question => {
+      values(question).forEach(value => {
+        const parts = String(value).match(/^([0-9]+)−([0-9]+)$/);
+        if (!parts) return;
+        assert(Number(parts[1]) >= Number(parts[2]), 'しらべる/' + stageIndex + ': 答えの出ない式「' + value + '」が選択肢にあります');
+      });
+    });
+  }
+}
+
+// 「あと0こ」でタップ操作にしないこと(何もタップせず決定することになる)。
+for (const seed of [7301, 7302, 7303]) {
+  core.makeStageQuestions('number', 5, { seed }).questions.forEach(question => {
+    if (Number(question.correct) !== 0) return;
+    assert.notEqual(question.kind, 'tap', 'かず/5: 答えが0なのにタップ操作です');
+  });
+}
+
 const expressionPacks = [
   core.makeStageQuestions('solve', 6, { seed: 551 }),
   core.makeStageQuestions('solve', 8, { seed: 552 })

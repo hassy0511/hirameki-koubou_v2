@@ -445,7 +445,9 @@
       return finalizeQuestion({
         canonicalSkillId: NUMBER_STAGES[1].canonicalSkillId,
         kind: 'choice',
-        prompt: 'まるが おおいのは どっち？',
+        // 「おおいのは どっち？」と聞いて答えが「おなじ」だと、問いと答えが食い違う。
+        // 同じ数のときは、くらべること自体をたずねる。
+        prompt: correct === 'おなじ' ? 'まるの かずを くらべよう。どうなっている？' : 'まるが おおいのは どっち？',
         instruction: '「ひだり」「おなじ」「みぎ」から えらぼう',
         correct,
         options: ['ひだり', 'おなじ', 'みぎ'],
@@ -497,7 +499,9 @@
       const missing = target - known;
       return numericQuestion({
         canonicalSkillId: NUMBER_STAGES[5].canonicalSkillId,
-        kind: round % 2 ? 'slider' : 'tap',
+        // あと0こ のときにタップ操作だと、何もタップせずに決定することになる。
+        // 0を答えるときは、数を作る操作にする。
+        kind: (missing === 0 || round % 2) ? 'slider' : 'tap',
         prompt: target + 'こに するには、あと いくつ 入れる？',
         correct: missing,
         min: 0,
@@ -505,7 +509,7 @@
         start: 0,
         visual: { type: 'bond', target, known, missing },
         hint: known + 'こから、' + target + 'こまで 数えてみよう。',
-        explain: known + 'と' + missing + 'で' + target + '。空でも0という数で表せるよ。',
+        explain: known + 'と' + missing + 'で' + target + '。なにも ないときは 0 と かくよ。',
         math: { kind: 'bond', target, known, result: missing }
       }, rng);
     }
@@ -872,7 +876,7 @@
       return numericQuestion({
         canonicalSkillId: ADDITION_STAGES[9].canonicalSkillId,
         kind: round % 2 ? 'slider' : 'tap',
-        prompt: values[0] + '＋' + values[1] + '。まず10を作るには、' + values[1] + 'から いくつ動かす？',
+        prompt: values[0] + '＋' + values[1] + '。まず 10を つくるには、' + values[1] + 'から いくつ うごかす？',
         correct: need,
         min: 0,
         max: values[1],
@@ -1368,7 +1372,11 @@
         input: startHour + ':' + String(startMinute).padStart(2, '0'),
         clockStep: stageIndex === 9 ? 5 : 30,
         visual: { type: 'clock', hour, minute },
-        hint: minute === 0 ? '長い針は12。短い針を' + hour + 'にしよう。' : minute === 30 ? '長い針は6。短い針は' + hour + 'と次の数の間だよ。' : '長い針は1目盛り5分。' + minute + '分の場所をさがそう。',
+        hint: minute === 0
+          ? 'ながい はりは 12。みじかい はりを ' + hour + 'に しよう。'
+          : minute === 30
+            ? 'ながい はりは 6。みじかい はりは ' + hour + 'と つぎの かずの あいだだよ。'
+            : 'ながい はりは めもり ひとつで 5ふん。' + minute + 'ふんの ばしょを さがそう。',
         explain: '時計を ' + hour + 'じ' + (minute ? minute + 'ぷん' : '') + 'に 合わせられたね。'
       }, rng);
     }
@@ -1410,7 +1418,8 @@
       return finalizeQuestion({
         canonicalSkillId: SHAPE_STAGES[1].canonicalSkillId,
         kind: 'choice',
-        prompt: item.name + 'は、ころがる？ つめる？',
+        // 選べる答えが三つあるのに二つしか聞かないと、文を読み直すことになる。
+        prompt: item.name + 'は、ころがる？ つめる？ どちらも？',
         correct: item.correct,
         options: ['ころがる', 'つめる', 'どちらも'],
         visual: { type: 'solid-action', solid: item.icon, object: item.name, action: item.correct },
@@ -1494,12 +1503,12 @@
       return finalizeQuestion({
         canonicalSkillId: SHAPE_STAGES[6].canonicalSkillId,
         kind: 'choice',
-        prompt: '切り分けた' + pieces + 'まいの板。見本に合わせる動きは？',
+        prompt: 'きりわけた ' + pieces + 'まいの いた。みほんに あわせる うごきは？',
         correct,
         options: ['そのまま', 'まわす', 'うらがえす'],
         visual: { type: 'transform', pieces, action: correct },
-        hint: '角の向きを 見くらべよう。',
-        explain: '板を「' + correct + '」と 見本に合うよ。'
+        hint: 'かどの むきを み くらべよう。',
+        explain: 'いたを「' + correct + '」と、みほんに あうよ。'
       }, rng);
     }
     if (stageIndex === 7) {
@@ -1722,7 +1731,7 @@
           options: ['たしざん', 'ひきざん'],
           story: true,
           visual: { type: 'operation-choice', operation: story.operation },
-          hint: '増えたのか、使って減ったのかを 見よう。',
+          hint: 'ふえたのか、つかって へったのかを みよう。',
           explain: 'この場面は「' + story.operation + '」。式は' + story.equation + '。',
           math: story.math
         }, rng);
@@ -1739,7 +1748,7 @@
           options: [story.equation.split('＝')[0], wrong, String(story.answer)],
           story: true,
           visual: { type: 'story-model', text: story.text },
-          hint: 'はじめの数と、動いた数を 式へ入れよう。',
+          hint: 'はじめの かずと、うごいた かずを しきへ いれよう。',
           explain: '場面に合う式は ' + story.equation + '。',
           math: story.math
         }, rng);
@@ -1755,7 +1764,7 @@
           start: 0,
           story: true,
           visual: { type: 'relation', math: story.math },
-          hint: '全体と部分の どこが分からないか 見よう。',
+          hint: 'ぜんたいと ぶぶんの どこが わからないか みよう。',
           explain: story.equation + '。'
         }, rng);
       }
@@ -1768,7 +1777,7 @@
         options: [expression, story.math.a + (story.operation === 'たしざん' ? '−' : '＋') + story.math.b, String(story.answer)],
         story: true,
         visual: { type: 'circuit', equation: story.text },
-        hint: '増えたか、減ったかを たしかめよう。',
+        hint: 'ふえたか、へったかを たしかめよう。',
         explain: 'お話とつながるのは ' + story.equation + '。',
         math: story.math
       }, rng);

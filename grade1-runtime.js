@@ -42,12 +42,14 @@
       contract('choice', { sourceRound: 1 }),
       contract('input', { sourceRound: 3 }),
       assessment({ reviewPlan: [0, 1, 2, 3, 0, 1, 2, 3] }),
-      contract('tap', { sourceRound: 1 }),
+      // 「あと0こ」は、何もタップしないという操作になってしまう。
+      // 0を答えるときだけ数を作る操作へ寄せられるよう、組で許可する。
+      paired(['tap', 'slider'], { sourceRound: 1 }),
       contract('order', { sourceRound: 0 }),
       contract('choice'),
       contract('choice', { sourceRound: 0 }),
       contract('choice', { sourceRound: 0 }),
-      assessment({ reviewPlan: [0, 1, 2, 3, 5, 6, 8, 9] })
+      assessment({ reviewPlan: [5, 6, 8, 9, 0, 1, 2, 3] })
     ]),
     addition: Object.freeze([
       contract('choice'),
@@ -60,7 +62,7 @@
       contract('numberline', { sourceRound: 1 }),
       contract('route'),
       contract('tap', { sourceRound: 0 }),
-      assessment({ reviewPlan: [1, 2, 3, 5, 6, 7, 8, 9] })
+      assessment({ reviewPlan: [5, 6, 7, 8, 9, 1, 2, 3] })
     ]),
     subtraction: Object.freeze([
       contract('tap', { sourceRound: 1 }),
@@ -77,7 +79,7 @@
       contract('choice'),
       contract('numberline'),
       paired(['remove', 'choice'], { custom: 'placeValueRemove' }),
-      assessment({ reviewPlan: [0, 1, 2, 3, 5, 6, 7, 8] })
+      assessment({ reviewPlan: [5, 6, 7, 8, 0, 1, 2, 3] })
     ]),
     measure: Object.freeze([
       contract('choice'),
@@ -90,7 +92,7 @@
       paired(['choice', 'clock']),
       paired(['choice', 'clock']),
       paired(['choice', 'clock']),
-      assessment({ reviewPlan: [0, 1, 2, 3, 5, 6, 8, 9] })
+      assessment({ reviewPlan: [5, 6, 8, 9, 0, 1, 2, 3] })
     ]),
     shape: Object.freeze([
       contract('choice'),
@@ -103,7 +105,7 @@
       contract('tap'),
       contract('select'),
       contract('select'),
-      assessment({ reviewPlan: [0, 1, 2, 3, 5, 6, 7, 9] })
+      assessment({ reviewPlan: [5, 6, 7, 9, 0, 1, 2, 3] })
     ]),
     solve: Object.freeze([
       contract('sort', { custom: 'mathClassify' }),
@@ -116,7 +118,7 @@
       contract('input'),
       contract('choice'),
       contract('grouping', { custom: 'equalGroups' }),
-      assessment({ reviewPlan: [0, 1, 2, 3, 5, 6, 8, 9] })
+      assessment({ reviewPlan: [5, 6, 8, 9, 0, 1, 2, 3] })
     ])
   });
 
@@ -240,7 +242,13 @@
       a + symbol + nearB,
       Math.max(0, a - 1) + symbol + b
     ];
-    return core.shuffle(uniqueOptions(candidates).slice(0, 4), rng);
+    // 小1に「2−7」のような答えの出ない式は示さない。
+    // 誤答は「どんな勘ちがいか」が読み取れるものだけにする。
+    const usable = candidates.filter(function (text) {
+      const parts = String(text).match(/^([0-9]+)−([0-9]+)$/);
+      return !parts || Number(parts[1]) >= Number(parts[2]);
+    });
+    return core.shuffle(uniqueOptions(usable.length >= 3 ? usable : candidates).slice(0, 4), rng);
   }
 
   // 盤面に並んだ札から選ぶ問題では、選択肢は盤面そのもの。
@@ -337,6 +345,50 @@
     return 'すうじを いれて「けってい」';
   }
 
+  // 小1の問題文は全ひらがな・分かち書きで書いている。
+  // ところがヒントと解説だけ漢字が残っており、つまずいた子がいちばん読む文が
+  // いちばん読みにくい状態だった。表示する支援文をひらがなへそろえる。
+  // 長い語から順に置き換える(「見本」を「見」より先に処理する必要がある)。
+  const CHILD_WORDS = Object.freeze([
+    ['長い針', 'ながい はり'], ['短い針', 'みじかい はり'], ['次の数', 'つぎの かず'],
+    ['はじめの数', 'はじめの かず'], ['同じ数', 'おなじ かず'], ['同じ大きさ', 'おなじ おおきさ'],
+    ['一つずつ', 'ひとつずつ'], ['一つ分', 'ひとつぶん'], ['二つ分', 'ふたつぶん'],
+    ['見本', 'みほん'], ['時計', 'とけい'], ['場面', 'ばめん'], ['全体', 'ぜんたい'], ['部分', 'ぶぶん'],
+    ['二本', '2ほん'], ['十の位', '10の くらい'], ['一の位', '1の くらい'],
+    ['数えよう', 'かぞえよう'], ['数えて', 'かぞえて'], ['数える', 'かぞえる'], ['数字', 'すうじ'],
+    ['分かる', 'わかる'], ['分けよう', 'わけよう'], ['分けて', 'わけて'], ['分けると', 'わけると'],
+    ['分ける', 'わける'], ['半分', 'はんぶん'],
+    ['合わせられた', 'あわせられた'], ['合わせて', 'あわせて'], ['合わせよう', 'あわせよう'],
+    ['合わせる', 'あわせる'], ['合う', 'あう'], ['はい分', 'はいぶん'],
+    ['見よう', 'みよう'], ['見て', 'みて'], ['見る', 'みる'],
+    ['同じ', 'おなじ'], ['進もう', 'すすもう'], ['進む', 'すすむ'],
+    ['長さ', 'ながさ'], ['長い', 'ながい'], ['短い', 'みじかい'], ['高い', 'たかい'], ['低い', 'ひくい'],
+    ['増える', 'ふえる'], ['増やそう', 'ふやそう'], ['減らそう', 'へらそう'], ['減る', 'へる'],
+    ['動かそう', 'うごかそう'], ['動かす', 'うごかす'], ['動き', 'うごき'],
+    ['大きな', 'おおきな'], ['大きい', 'おおきい'], ['大きさ', 'おおきさ'], ['小さい', 'ちいさい'], ['多い', 'おおい'], ['少ない', 'すくない'],
+    ['入れました', 'いれました'], ['入れよう', 'いれよう'], ['入れる', 'いれる'], ['入れ', 'いれ'],
+    ['こ分', 'こぶん'], ['つ分', 'つぶん'], ['取ろう', 'とろう'], ['取る', 'とる'],
+    ['出そう', 'だそう'], ['取り出し', 'とりだし'], ['取り出す', 'とりだす'],
+    ['いくつ動かす', 'いくつ うごかす'], ['どの人', 'どの ひと'], ['動かさ', 'うごかさ'], ['使おう', 'つかおう'], ['使う', 'つかう'],
+    ['回そう', 'まわそう'], ['回', 'かい'], ['向き', 'むき'], ['計算', 'けいさん'],
+    ['列', 'れつ'], ['針', 'はり'], ['角', 'かど'], ['板', 'いた'], ['式', 'しき'], ['話', 'はなし'],
+    ['何も', 'なにも'], ['何か', 'なにか'], ['次', 'つぎ'], ['何', 'なん'], ['空', 'から'], ['表す', 'あらわす'],
+    ['左', 'ひだり'], ['右', 'みぎ'], ['先', 'さき'], ['後ろ', 'うしろ'], ['十', '10'],
+    ['形', 'かたち'], ['人', 'ひと'], ['取り', 'とり'], ['出す', 'だす'], ['場所', 'ばしょ'], ['目盛り', 'めもり'],
+    ['表せる', 'あらわせる'], ['間', 'あいだ'], ['数', ' かず'], ['位', 'くらい'], ['本', 'ほん'], ['個', 'こ'],
+    ['前', 'まえ'], ['上', 'うえ'], ['下', 'した'], ['中', 'なか'], ['側', 'がわ'],
+    ['全部', 'ぜんぶ'], ['一', 'いち'], ['二', 'に'], ['三', 'さん']
+  ]);
+
+  function toChildText(text) {
+    let value = String(text || '');
+    for (let index = 0; index < CHILD_WORDS.length; index += 1) {
+      value = value.split(CHILD_WORDS[index][0]).join(CHILD_WORDS[index][1]);
+    }
+    // 置き換えで空白が重なったり、句読点の前に空白が来たりするのをならす
+    return value.replace(/ {2,}/g, ' ').replace(/ ([。、」])/g, '$1').replace(/^ +/, '').trim();
+  }
+
   // 「すすむ/もどる」は数の線の上でだけ意味を持つ言い回し。
   // 合流図やダイヤル盤に対して使うと、画面に無い動きを指示することになる。
   const MOTION_WORDS = /すすも|進も|もどろ|もどる|後ろへ|先へ/;
@@ -413,7 +465,7 @@
   const SCENE_TEMPLATES = Object.freeze({
     add: [
       function (m) { return 'トトが まるを ' + m.a + 'こ、モクモが ' + m.b + 'こ もってきました。あわせて いくつ？'; },
-      function (m) { return 'はこに まるが ' + m.a + 'こ。あとから ' + m.b + 'こ 入れました。ぜんぶで いくつ？'; },
+      function (m) { return 'はこに まるが ' + m.a + 'こ。あとから ' + m.b + 'こ いれました。ぜんぶで いくつ？'; },
       function (m) { return 'たなに まるが ' + m.a + 'こと ' + m.b + 'こ あります。あわせて いくつ？'; }
     ],
     subtract: [
@@ -428,7 +480,7 @@
     count: [
       function () { return 'トトが まるを ならべました。ぜんぶで いくつ？'; },
       function () { return 'たなに まるが ならんでいます。ぜんぶで いくつ？'; },
-      function () { return 'モクモが まるを はこに 入れました。ぜんぶで いくつ？'; }
+      function () { return 'モクモが まるを はこに いれました。ぜんぶで いくつ？'; }
     ]
   });
 
@@ -725,13 +777,14 @@
     }
     fixKnownQuestionProblems(question, lineId, stageContract.assessment ? sourceStageIndex : stageIndex, variation, rng);
     if (question.kind === 'choice' || question.kind === 'route' || question.kind === 'sort') normalizeChoiceOptions(question, rng);
-    question.instruction = instructionFor(question);
-    question.hint = resolveHint(question);
-    question.explain = enrichExplain(question);
-    question.hints = uniqueOptions([question.hint, secondHint(question)]);
+    question.instruction = toChildText(instructionFor(question));
+    question.hint = toChildText(resolveHint(question));
+    question.explain = toChildText(enrichExplain(question));
+    question.hints = uniqueOptions([question.hint, toChildText(secondHint(question))]);
     if (question.hints.length < 2) question.hints.push('わかっている ところから、ひとつずつ たしかめよう。');
     const learningTemplate = question.templateId || lineId + '.' + stage.id;
     if (question.story) question.sceneApplied = applyScene(question, rng);
+    question.prompt = toChildText(question.prompt);
     question.templateId = learningTemplate + '.arc-' + question.arcRole;
     question.interactionFamily = lineId + '.' + stage.id + ':' + question.kind;
     question.difficulty = difficultyScore(question);
