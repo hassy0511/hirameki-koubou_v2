@@ -542,8 +542,8 @@
         correct: row[index],
         options: row,
         visual: { type: 'row', items: row, direction: fromRight ? 'right' : 'left' },
-        hint: (fromRight ? '右' : '左') + 'の はしから「1、2…」と 数えよう。',
-        explain: (fromRight ? '右' : '左') + 'から' + ordinal + 'ばんめは ' + row[index] + 'だよ。'
+        hint: (fromRight ? 'みぎ' : 'ひだり') + 'の はしから「1、2…」と かぞえよう。',
+        explain: (fromRight ? 'みぎ' : 'ひだり') + 'から' + ordinal + 'ばんめは ' + row[index] + 'だよ。'
       }, rng);
     }
     if (stageIndex === 8) {
@@ -609,12 +609,24 @@
         start: tens * 10,
         visual: { type: 'place-value', tens, ones },
         hint: '10の まとまりで' + (tens * 10) + '。そこへ ばらを あわせよう。',
-        explain: (tens * 10) + 'と' + ones + 'で' + correct + '。'
+        explain: (tens * 10) + 'と' + ones + 'で' + correct + '。',
+        math: { kind: 'placeValue', tens, ones, result: correct }
       }, rng);
     }
     const pool = [5, 6, 7, 8, 9];
     const q = buildNumberQuestion(pool[round % pool.length], round + 7, rng);
     return retagQuestion(q, { checkpoint: true, assessmentFor: NUMBER_STAGES[10].canonicalSkillId, story: round === 6 });
+  }
+
+  function signGlyph(op) {
+    return op === '-' ? '−' : op === '+' ? '＋' : op;
+  }
+
+  // 「ちがう」は動詞なので、「だ」を付けると文が壊れる(ちがうだよ／ちがうだと分かるよ)。
+  // 比べた結果を文にするときは、語に合わせて言い方を変える。
+  function comparisonWording(correct, tail) {
+    if (correct === 'ちがう') return tail === 'だよ。' ? 'ちがうね。' : 'ちがう' + tail;
+    return correct + (tail === 'だよ。' ? 'だよ。' : 'だ' + tail);
   }
 
   function additionValues(max, carry, rng) {
@@ -624,7 +636,9 @@
       a = rand(6, 9, rng);
       b = rand(Math.max(2, 11 - a), 9, rng);
     } else if (max <= 10) {
-      a = rand(1, 8, rng);
+      // aがmaxを超えると b の範囲が空になり、負の数が混ざる。
+      // 和がmax以下になるよう、まずaをmax未満に収める。
+      a = rand(1, Math.max(1, Math.min(8, max - 1)), rng);
       b = rand(1, max - a, rng);
     } else {
       do {
@@ -663,31 +677,24 @@
       return additionStory(stageIndex >= 6 ? 20 : 10, stageIndex === 9, rng);
     }
     if (stageIndex === 0) {
-      const n = rand(2, 10, rng);
-      const variant = round % 3;
-      if (variant === 0) {
-        return selectorQuestion(n, 10, {
-          canonicalSkillId: ADDITION_STAGES[0].canonicalSkillId,
-          prompt: 'まるを ' + n + 'こ えらぼう。',
-          hint: 'えらんだ まるを、ひとつずつ かぞえよう。',
-          explain: 'まるを ' + n + 'こ えらべたね。',
-          templateId: 'addition.count.tap',
-          interactionFamily: 'addition.count:tap'
-        }, rng);
-      }
+      // 「たしざんの じゅんび」。st2(あわせると いくつ？)と同じ値域にすると
+      // 導入と本編がまったく同じ問題になるため、ここは和が6までにとどめ、
+      // 二つのまとまりを目で追える範囲で「あわせる」を体験させる。
+      const values = additionValues(6, false, rng);
       return numericQuestion({
         canonicalSkillId: ADDITION_STAGES[0].canonicalSkillId,
-        kind: variant === 1 ? 'choice' : 'input',
-        prompt: 'まるは いくつ？',
-        instruction: variant === 1 ? 'かぞえて、すうじを えらぼう' : 'かぞえて、すうじを いれよう',
-        correct: n,
-        min: 1,
-        max: 10,
-        visual: { type: 'objects', count: n, icon: 'count-dot' },
-        hint: 'ひだりから、ひとつずつ かぞえよう。',
-        explain: 'まるは ' + n + 'こだね。',
-        templateId: variant === 1 ? 'addition.count.choice' : 'addition.count.input',
-        interactionFamily: variant === 1 ? 'addition.count:choice' : 'addition.count:input'
+        kind: round % 2 ? 'tap' : 'choice',
+        prompt: values[0] + 'こと ' + values[1] + 'こ。あわせると いくつ？',
+        correct: values[2],
+        min: 0,
+        max: 6,
+        start: 0,
+        visual: { type: 'merge', counts: [values[0], values[1]], operation: '+' },
+        hint: 'まず ' + values[0] + 'こ。そこへ ' + values[1] + 'こ くわえて かぞえよう。',
+        explain: values[0] + 'こと ' + values[1] + 'こで ' + values[2] + 'こ。',
+        math: { kind: 'add', a: values[0], b: values[1], result: values[2] },
+        templateId: 'addition.prepare.combine',
+        interactionFamily: 'addition.prepare:combine'
       }, rng);
     }
     if (stageIndex === 1) {
@@ -763,11 +770,17 @@
       let a;
       let b;
       let c;
+      // 「3つの かずを たす」(st7)は、繰り上がりを教える st9 より前にある。
+      // 途中で10をこえる組み合わせを出すと、まだ習っていない技能を要求することになる。
+      // 途中結果も合計も10以下になる数だけを使う。
+      let guard = 0;
       do {
         a = rand(1, 8, rng);
         b = rand(1, 6, rng);
         c = rand(1, 6, rng);
-      } while (a + b + c > 20);
+        guard += 1;
+      } while (guard < 40 && (a + b > 10 || a + b + c > 10));
+      if (a + b > 10 || a + b + c > 10) { a = 2; b = 3; c = 4; }
       const correct = a + b + c;
       return numericQuestion({
         canonicalSkillId: ADDITION_STAGES[7].canonicalSkillId,
@@ -778,14 +791,31 @@
         max: 20,
         start: a,
         visual: { type: 'three-step', values: [a, b, c], ops: ['+', '+'] },
-        hint: '左から、まず' + a + '＋' + b + 'を 計算しよう。',
+        hint: 'ひだりから、まず' + a + '＋' + b + 'を けいさんしよう。',
         explain: a + '＋' + b + '＋' + c + '＝' + correct + '。',
         math: { kind: 'sequence', values: [a, b, c], ops: ['+', '+'], result: correct }
       }, rng);
     }
     if (stageIndex === 8) {
-      const source = buildAdditionQuestion(round % 4 + 1, round + 5, rng);
-      const correct = source.math && source.math.result != null ? source.math.result : source.correct;
+      // 「しきに 合う こたえは どれ？」と問う以上、盤面には式が出ていなければならない。
+      // 元の問題文をそのまま盤面へ載せると、式ではない文(「5こに したい。いま 4こ。あと いくつ？」)が
+      // 式として提示され、問いと画面が食い違う。
+      let source = null;
+      let equation = null;
+      for (let attempt = 0; attempt < 6 && !equation; attempt += 1) {
+        source = buildAdditionQuestion(round % 4 + 1, round + 5 + attempt * 7, rng);
+        const math = source.math || {};
+        if (math.kind === 'add') equation = math.a + '＋' + math.b + '＝□';
+        else if (math.kind === 'bond') equation = math.known + '＋□＝' + math.target;
+        else if (math.kind === 'sequence' && Array.isArray(math.values)) equation = math.values.join('＋') + '＝□';
+      }
+      if (!equation) {
+        const values = additionValues(20, false, rng);
+        source = { math: { kind: 'add', a: values[0], b: values[1], result: values[2] }, hint: null, explain: null };
+        equation = values[0] + '＋' + values[1] + '＝□';
+      }
+      const sourceMath = source.math || {};
+      const correct = sourceMath.result != null ? sourceMath.result : source.correct;
       const options = numberChoices(Number(correct), 0, 20, 3, rng).map(function (value) {
         return { value, label: 'こたえ ' + value };
       });
@@ -795,10 +825,10 @@
         prompt: 'しきに 合う こたえは どれ？',
         correct,
         options,
-        visual: { type: 'circuit', equation: source.prompt, paths: options.map(optionValue) },
-        hint: source.hint,
-        explain: source.explain,
-        math: source.math
+        visual: { type: 'circuit', equation, paths: options.map(optionValue) },
+        hint: source.hint || 'しきの かずを、ひとつずつ たしかめよう。',
+        explain: source.explain || equation.replace('□', String(correct)) + 'だよ。',
+        math: sourceMath
       }, rng);
     }
     if (stageIndex === 9) {
@@ -972,7 +1002,9 @@
       return numericQuestion({
         canonicalSkillId: SUBTRACTION_STAGES[6].canonicalSkillId,
         kind: 'route',
-        prompt: a + ops[0] + b + ops[1] + c + '。ひだりから けいさんしよう。',
+        // 記号は他のステージと同じ全角(＋・−)へそろえる。半角の -/+ が混ざると、
+        // 同じ引き算なのに画面ごとに見た目の違う記号が出ることになる。
+        prompt: a + signGlyph(ops[0]) + b + signGlyph(ops[1]) + c + '。ひだりから けいさんしよう。',
         correct,
         min: 0,
         max: 20,
@@ -1111,7 +1143,8 @@
       samePrompt: 'ひだりと みぎの ' + object + 'は、おなじ ながさ？',
       hint: mode === 'indirect' ? 'テープに うつした二本を、同じ はじまりから くらべよう。' : '二本の はじまりを そろえて、どこまで のびるか見よう。',
       explain: function (left, right, correct) {
-        return (mode === 'indirect' ? 'テープにうつして はじまりをそろえると、' : 'はじまりをそろえると、') + correct + 'だと分かるよ。';
+        const lead = mode === 'indirect' ? 'テープに うつして はじまりを そろえると、' : 'はじまりを そろえると、';
+        return lead + comparisonWording(correct, 'と 分かるよ。');
       }
     }, round, rng);
   }
@@ -1224,7 +1257,7 @@
         shorterPrompt: '同じマスで しきつめたよ。どちらが せまい？',
         samePrompt: '二つの ひろさは、おなじ？',
         hint: '同じ大きさのマスを 数えよう。',
-        explain: function (left, right, correct) { return 'ひだりは' + left + 'マス、みぎは' + right + 'マス。' + correct + 'だよ。'; }
+        explain: function (left, right, correct) { return 'ひだりは' + left + 'マス、みぎは' + right + 'マス。' + comparisonWording(correct, 'だよ。'); }
       }, round, rng);
     }
     if (stageIndex >= 7 && stageIndex <= 9) {
@@ -1257,8 +1290,15 @@
           interactionFamily: 'measure.clock:read'
         }, rng);
       }
-      let startHour = hour === 12 ? 1 : hour + 1;
-      const startMinute = stageIndex === 9 ? (minute === 55 ? 0 : (minute + 5) % 60) : (minute === 0 ? 30 : 0);
+      // 針の初期位置が正解からの固定のずれだと、時計を読まずに
+      // 「短い針を1つ戻して長い針を半周戻す」という手続きだけで全問正解できてしまう。
+      // ずれ方を毎回変えて、時計を読まないと合わせられないようにする。
+      const hourShift = pick([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], rng);
+      const startHour = ((hour - 1 + hourShift) % 12) + 1;
+      const minuteStep = stageIndex === 9 ? 5 : 30;
+      const minuteSlots = 60 / minuteStep;
+      const minuteShift = pick(Array.from({ length: minuteSlots - 1 }, function (_, index) { return index + 1; }), rng);
+      const startMinute = (minute + minuteShift * minuteStep) % 60;
       return finalizeQuestion({
         canonicalSkillId: MEASURE_STAGES[stageIndex].canonicalSkillId,
         kind: 'clock',
@@ -1280,13 +1320,20 @@
   function buildShapeQuestion(stageIndex, round, rng) {
     if (stageIndex === 0) {
       const solid = pick(SOLIDS, rng);
+      // 問題文に答えの語(はこ・つつ・ボール…)がそのまま入っていると、
+      // 形を見なくても字が同じものを選ぶだけで正解できてしまう。
+      // 例える物の名前には、選択肢の語を含めない。
       const objects = {
-        'はこ': ['ティッシュの はこ', 'にもつの はこ', 'おかしの はこ', 'けしゴム'],
-        'さいころ': ['ゲームの さいころ', 'しかくい ブロック', 'つみき', 'こおりの かたち'],
-        'つつ': ['かん', 'かみの つつ', 'テープの しん', 'まるい のり'],
-        'ボール': ['ボール', 'まるい ビーだま', 'オレンジ', 'けいとの たま']
+        'はこ': ['ティッシュの ケース', 'ずかん', 'けしゴム', 'せっけん'],
+        'さいころ': ['つみき', 'しかくい ブロック', 'こおりの かたち', 'かどの そろった ブロック'],
+        'つつ': ['かん', 'テープの しん', 'まるい のり', 'えんぴつたて'],
+        'ボール': ['オレンジ', 'けいとの たま', 'まるい ビーだま', 'すいか']
       };
-      const object = pick(objects[solid.name], rng);
+      const solidNames = SOLIDS.map(function (item) { return item.name; });
+      const safeObjects = objects[solid.name].filter(function (name) {
+        return !solidNames.some(function (solidName) { return name.includes(solidName); });
+      });
+      const object = pick(safeObjects.length ? safeObjects : objects[solid.name], rng);
       return finalizeQuestion({
         canonicalSkillId: SHAPE_STAGES[0].canonicalSkillId,
         kind: 'choice',

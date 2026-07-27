@@ -916,7 +916,7 @@
     if (visual.type === 'solid-scan' || visual.type === 'solid-action' || visual.type === 'stamp') {
       const solidValue = visual.icon || visual.solid;
       const solidLabel = visual.object || tokenMeta(solidValue).label;
-      return '<div class="visual-board" style="' + lineStyle(line) + '"><div class="solid-board"><div class="solid-focus"><small>しらべる かたち</small>' + visualTokenHtml(solidValue, 'solid-token-visual', solidLabel) + '</div>' + (visual.face ? '<span class="operation-symbol">→</span><div class="face-card"><small>うつした めん</small><strong>' + childText(visual.face) + '</strong></div>' : '') + '</div></div>';
+      return '<div class="visual-board" style="' + lineStyle(line) + '"><div class="solid-board"><div class="solid-focus"><small>しらべる かたち</small>' + visualTokenHtml(solidValue, 'solid-token-visual', solidLabel) + '</div>' + (visual.face ? '<span class="operation-symbol">→</span><div class="face-card"><small>うつした めん</small><strong aria-label="こたえを かんがえよう">？</strong></div>' : '') + '</div></div>';
     }
     if (visual.type === 'sort') {
       const itemKnown = tokenMeta(visual.item).className !== 'text';

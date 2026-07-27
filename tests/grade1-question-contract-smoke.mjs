@@ -44,7 +44,17 @@ function assertQuestion(question, lineId, stageIndex) {
   if (['choice', 'route', 'sort'].includes(question.kind)) {
     const optionValues = values(question);
     assert(optionValues.includes(String(question.correct)), lineId + '/' + stage.id + ': 正解が選択肢にありません');
-    if (Number.isFinite(Number(question.correct))) assert.equal(new Set(optionValues).size, 4, lineId + '/' + stage.id + ': 数値選択肢が4つありません');
+    // 盤面に並んだ札から選ぶ問題では、選択肢は盤面そのもの(枚数は盤面が決める)。
+    // それ以外の数値問題は、誤概念にもとづく4択を保つ。
+    const boardItems = Array.isArray(question.visual?.items) ? question.visual.items.map(String) : null;
+    const fromBoard = Boolean(boardItems && optionValues.length && optionValues.every(value => boardItems.includes(value)));
+    if (Number.isFinite(Number(question.correct))) {
+      if (fromBoard) {
+        assert(new Set(optionValues).size >= 3, lineId + '/' + stage.id + ': 盤面の選択肢が少なすぎます');
+      } else {
+        assert.equal(new Set(optionValues).size, 4, lineId + '/' + stage.id + ': 数値選択肢が4つありません');
+      }
+    }
   }
   if (question.sourceCanonicalSkillId !== 'g1.sub.zero_same' && question.math?.kind === 'subtract') {
     assert.notEqual(Number(question.math.b), 0, lineId + '/' + stage.id + ': 自明な「−0」です');
@@ -99,6 +109,54 @@ for (let packIndex = 0; generatedCount < 1000; packIndex += 1) {
   const lineId = core.LINE_ORDER[packIndex % core.LINE_ORDER.length];
   const stageIndex = Math.floor(packIndex / core.LINE_ORDER.length) % 11;
   core.makeStageQuestions(lineId, stageIndex, { seed: 700000 + packIndex * 7919 }).questions.forEach(question => assertQuestion(question, lineId, stageIndex));
+}
+
+// 盤面から選ぶ問題の選択肢は、盤面に並んだ札だけであること。
+// 数字に見えるからと作り直すと、盤面に無い数(0や6)が選択肢に現れる。
+for (const seed of [4001, 4002, 4003]) {
+  core.makeStageQuestions('number', 7, { seed }).questions.forEach(question => {
+    const items = (question.visual?.items || []).map(String);
+    values(question).forEach(value => {
+      assert(items.includes(value), 'なんばんめ: 盤面に無い ' + value + ' が選択肢にあります');
+    });
+  });
+}
+
+// 位取りの誤答は、十の位を読まずに当てられないこと。
+for (const seed of [4101, 4102, 4103]) {
+  core.makeStageQuestions('number', 9, { seed }).questions.forEach(question => {
+    const options = values(question).map(Number).filter(Number.isFinite);
+    if (options.length < 3 || Number(question.correct) < 10) return;
+    assert(new Set(options.map(value => Math.floor(value / 10))).size > 1, '位取り: 誤答の十の位が正解と全部同じです');
+  });
+}
+
+// 文言の作法。記号は全角へそろえ、「ちがう」に「だ」を付けない。
+for (const lineId of core.LINE_ORDER) {
+  for (let stageIndex = 0; stageIndex < 11; stageIndex += 1) {
+    core.makeStageQuestions(lineId, stageIndex, { seed: 4200 + stageIndex }).questions.forEach(question => {
+      const text = [question.prompt, question.hint, question.explain].join(' ');
+      assert(!/[0-9][-+][0-9]/.test(question.prompt), lineId + ': 式に半角記号が混ざっています → ' + question.prompt);
+      assert(!/ちがうだ/.test(text), lineId + ': 「ちがうだ」という壊れた文です → ' + text);
+    });
+  }
+}
+
+// 時計は、正解からの固定のずれで初期表示しないこと。
+// 固定だと時計を読まずに「同じだけ戻す」手続きで全問正解できる。
+for (const stageIndex of [7, 8, 9]) {
+  const offsets = new Set();
+  for (let index = 0; index < 12; index += 1) {
+    core.makeStageQuestions('measure', stageIndex, { seed: 4300 + index * 31 }).questions.forEach(question => {
+      if (question.kind !== 'clock') return;
+      const toMinutes = value => {
+        const [hour, minute] = String(value).split(':').map(Number);
+        return hour * 60 + (minute || 0);
+      };
+      offsets.add(((toMinutes(question.input) - toMinutes(question.correct)) % 720 + 720) % 720);
+    });
+  }
+  assert(offsets.size > 1, 'measure/' + stageIndex + ': 針の初期位置が正解からの固定のずれです');
 }
 
 const expressionPacks = [

@@ -50,7 +50,7 @@
       assessment({ reviewPlan: [0, 1, 2, 3, 5, 6, 8, 9] })
     ]),
     addition: Object.freeze([
-      contract('choice', { sourceStage: 2, sourceRound: 0 }),
+      contract('choice'),
       contract('tap', { sourceRound: 1 }),
       contract('choice', { sourceRound: 0 }),
       contract('numberline', { sourceRound: 1 }),
@@ -187,6 +187,18 @@
       misconceptions.push(firstResult, first, correct + 1, correct - 1);
     } else if (math.kind === 'groups') {
       misconceptions.push(math.groups, math.perGroup, math.total, correct + 1, correct - 1);
+    } else if (math.kind === 'placeValue') {
+      // 誤答が正解の±1・±2だけだと十の位が全部同じになり、
+      // 「10のまとまりが何こか」を読まずに、ばらの数だけで当てられてしまう。
+      const tens = Number(math.tens);
+      const ones = Number(math.ones);
+      misconceptions.push(
+        ones * 10 + tens,          // 十と一を入れ替えた
+        (tens + 1) * 10 + ones,    // 十の位を1こ多く数えた
+        (tens - 1) * 10 + ones,    // 十の位を1こ少なく数えた
+        ones,                      // ばらだけ答えた
+        tens                       // まとまりの数だけ答えた
+      );
     } else {
       misconceptions.push(correct + 1, correct - 1, correct + 2, correct - 2);
       if (correct >= 10) misconceptions.push(Number(String(correct).split('').reverse().join('')));
@@ -227,11 +239,26 @@
     return core.shuffle(uniqueOptions(candidates).slice(0, 4), rng);
   }
 
+  // 盤面に並んだ札から選ぶ問題では、選択肢は盤面そのもの。
+  // 数字に見えるからと作り直すと、盤面に無い数が選択肢に現れる。
+  function optionsComeFromBoard(question) {
+    const items = question.visual && question.visual.items;
+    if (!Array.isArray(items) || !items.length) return false;
+    const values = (question.options || []).map(optionValue).map(String);
+    if (!values.length) return false;
+    const board = items.map(String);
+    return values.every(function (value) { return board.includes(value); });
+  }
+
   function normalizeChoiceOptions(question, rng) {
     const values = (question.options || []).map(optionValue);
     const expression = typeof question.correct === 'string' && /[＋−]/.test(question.correct);
     if (expression) {
       question.options = expressionOptions(question, rng);
+      return;
+    }
+    if (optionsComeFromBoard(question)) {
+      question.options = uniqueOptions(question.options || []);
       return;
     }
     if (isNumeric(question.correct)) {
@@ -734,8 +761,10 @@
     // そこで「使い切るまで再利用しない・直前と同じ内容にしない」を優先し、
     // 同じことをもう一度問うときも、間隔と見た目を必ず変える。
     const learningUseCount = new Map();
+    const answerUseCount = new Map();
     const usedVisible = new Set();
     let previousLearning = null;
+    let previousAnswer = null;
     for (let round = 0; round < count; round += 1) {
       const arcRound = round % ARC.length;
       let best = null;
@@ -751,9 +780,13 @@
         if (usedVisible.has(visibleKey(candidate))) continue;
         // 直前の問題と学習内容が同じものは、どれだけ難易度が合っていても選ばない
         if (candidate.learningSignature === previousLearning) continue;
+        // 答えが同じ問題が続くと、考えずに前と同じものを選べてしまう。
+        // ただし答えが3種類しかないステージもあるので、禁止するのは「直前と同じ」まで。
+        if (previousAnswer != null && String(candidate.correct) === previousAnswer) continue;
         const reuse = learningUseCount.get(candidate.learningSignature) || 0;
+        const answerReuse = answerUseCount.get(String(candidate.correct)) || 0;
         const recentlyPlayed = excluded.has(candidate.learningSignature) ? 1 : 0;
-        const score = reuse * 10 + recentlyPlayed * 4 + candidateDistance(candidate, arcRound);
+        const score = reuse * 10 + answerReuse * 3 + recentlyPlayed * 4 + candidateDistance(candidate, arcRound);
         if (!best || score < bestScore) {
           best = candidate;
           bestScore = score;
@@ -777,7 +810,9 @@
       usedLearning.add(best.learningSignature);
       usedVisible.add(visibleKey(best));
       learningUseCount.set(best.learningSignature, (learningUseCount.get(best.learningSignature) || 0) + 1);
+      answerUseCount.set(String(best.correct), (answerUseCount.get(String(best.correct)) || 0) + 1);
       previousLearning = best.learningSignature;
+      previousAnswer = String(best.correct);
       questions.push(best);
     }
     return { seed, questions };

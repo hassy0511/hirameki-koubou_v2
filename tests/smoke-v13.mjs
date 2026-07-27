@@ -71,6 +71,10 @@ function validateMath(question, label) {
   } else if (math.kind === 'groups') {
     assert.equal(math.total, math.groups * math.perGroup, label + ': 等分のまとまりが不正です');
     assert([math.groups, math.perGroup].includes(math.result), label + ': 等分の答えが不正です');
+  } else if (math.kind === 'placeValue') {
+    // 位取りの問題は、誤答を「十と一の取り違え」から作るために内訳を持つ
+    assert.equal(math.result, math.tens * 10 + math.ones, label + ': 位取りの内訳と答えが合いません');
+    assert(math.ones >= 0 && math.ones <= 9, label + ': 一の位が0〜9の範囲にありません');
   } else {
     assert.fail(label + ': 未知の計算メタデータです ' + math.kind);
   }
