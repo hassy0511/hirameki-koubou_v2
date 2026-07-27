@@ -208,6 +208,120 @@
     }, data || {});
   }
 
+  // 同じステージを遊び直したとき、毎回まったく同じ文が同じ順で並ぶと
+  // 「さっきと同じ」に見えて、考える気が続かない。
+  // 数と問うている内容はそのままに、言い回しだけを替える。
+  const PROMPT_PARAPHRASES = Object.freeze([
+    { match: /^計算後の十の束と一の部品は？$/, build: [
+      function () { return '計算のあと、十の束と一の部品はいくつずつ？'; },
+      function () { return '答えを十の束と一の部品で表すと？'; }
+    ] },
+    { match: /^筆算モニターの答えを合わせよう。$/, build: [
+      function () { return '筆算の答えにメーターを合わせよう。'; },
+      function () { return 'モニターの数字を、筆算の答えに合わせよう。'; }
+    ] },
+    { match: /^故障した筆算を直す。正しい答えは？$/, build: [
+      function () { return '筆算の表示がこわれている。正しい答えは？'; },
+      function () { return 'この筆算を直すと、答えはいくつ？'; }
+    ] },
+    { match: /^検査モニターの故障を直す。正しい計算結果は？$/, build: [
+      function () { return '検査モニターの表示がこわれている。正しい結果は？'; },
+      function () { return 'モニターを直すと、計算結果はいくつ？'; }
+    ] },
+    { match: /^(.+)の作業順を並べよう。$/, build: [
+      function (m) { return m[1] + 'は、どの順に計算する？'; },
+      function (m) { return m[1] + 'を計算する手順に並べよう。'; }
+    ] },
+    { match: /^位をそろえたブロックを、答えの回路へつなごう。(.+)$/, build: [
+      function (m) { return '位をそろえて、' + m[1] + 'の答えへつなごう。'; },
+      function (m) { return m[1] + '。位をそろえたブロックを答えへつなごう。'; }
+    ] },
+    { match: /^(.+)の段の積へ合わせよう。$/, build: [
+      function (m) { return m[1] + 'の段の答えにメーターを合わせよう。'; },
+      function (m) { return m[1] + 'の段の積になるよう合わせよう。'; }
+    ] },
+    { match: /^(.+)×(.+)を表すまとまりは？$/, build: [
+      function (m) { return m[1] + '×' + m[2] + 'のまとまりはどれ？'; },
+      function (m) { return m[1] + 'が' + m[2] + 'こ分になるまとまりはどれ？'; }
+    ] },
+    { match: /^(.+)×□＝(.+)。□は？$/, build: [
+      function (m) { return m[1] + 'に何をかけると' + m[2] + 'になる？'; },
+      function (m) { return '□に入る数は？ ' + m[1] + '×□＝' + m[2]; }
+    ] },
+    { match: /^(.+)こ入りのケースが(.+)こ。全部で何こ？$/, build: [
+      function (m) { return m[1] + 'こずつ入ったケースが' + m[2] + 'こある。全部で何こ？'; },
+      function (m) { return '1ケース' + m[1] + 'こ。' + m[2] + 'ケースでは全部で何こ？'; }
+    ] },
+    { match: /^一の位のレーンを合流すると何こ？$/, build: [
+      function () { return '一の位どうしを合わせると何こ？'; },
+      function () { return '一の位だけを先に計算すると何こ？'; }
+    ] },
+    { match: /^位取り回路を正しい答えへつなごう。$/, build: [
+      function () { return '位ごとに計算して、答えへつなごう。'; },
+      function () { return '位取りをたどって、正しい答えへつなごう。'; }
+    ] },
+    { match: /^答えのメーターを合わせよう。$/, build: [
+      function () { return 'メーターを計算の答えに合わせよう。'; },
+      function () { return '答えの数だけメーターを動かそう。'; }
+    ] },
+    { match: /^「同じ数ずつ」の部品箱を選ぼう。$/, build: [
+      function () { return 'どの箱も同じ数ずつ入っているのはどれ？'; },
+      function () { return '同じ数ずつに分けられている箱を選ぼう。'; }
+    ] },
+    { match: /^(.+)こずつ入った箱が(.+)こ。表す式は？$/, build: [
+      function (m) { return m[1] + 'こずつの箱が' + m[2] + 'こある。合う式は？'; },
+      function (m) { return '一つ分が' + m[1] + 'こ、それが' + m[2] + 'こ分。式で表すと？'; }
+    ] },
+    { match: /^このアレイを表すかけ算へつなごう。$/, build: [
+      function () { return 'ならんだ点の数を表すかけ算へつなごう。'; },
+      function () { return 'この並びに合うかけ算はどれ？'; }
+    ] },
+    { match: /^(.+)の段の一つ分を点灯しよう。$/, build: [
+      function (m) { return m[1] + 'の段の、一つ分の数だけ点灯しよう。'; },
+      function (m) { return m[1] + 'ずつのまとまり一つ分を点灯しよう。'; }
+    ] },
+    { match: /^(.+)の段を小さい順に並べよう。$/, build: [
+      function (m) { return m[1] + 'の段の答えを、小さい順に並べよう。'; },
+      function (m) { return m[1] + 'ずつ増える順に並べよう。'; }
+    ] },
+    { match: /^一箱に(.+)この部品を入れ、(.+)箱作った。全部で何こ？$/, build: [
+      function (m) { return '一箱' + m[1] + 'こずつ、' + m[2] + '箱つめた。全部で何こ？'; },
+      function (m) { return m[1] + 'こ入りの箱を' + m[2] + '箱作った。部品は全部で何こ？'; }
+    ] },
+    { match: /^部品が(.+)こあり、あとから(.+)こ届いた。いま何こ？$/, build: [
+      function (m) { return '部品が' + m[1] + 'こ。そこへ' + m[2] + 'こ届いた。いま何こ？'; },
+      function (m) { return '棚に' + m[1] + 'こあるところへ' + m[2] + 'こ運びこんだ。全部で何こ？'; }
+    ] },
+    { match: /^(.+)を百の位、(.+)を十の位、(.+)を一の位に置こう。$/, build: [
+      function (m) { return '百の位に' + m[1] + '、十の位に' + m[2] + '、一の位に' + m[3] + 'を置こう。'; },
+      function (m) { return '百の位から順に、' + m[1] + '・' + m[2] + '・' + m[3] + 'と置こう。'; }
+    ] },
+    { match: /^(.+)に(.+)の束を(.+)こ足そう。$/, build: [
+      function (m) { return m[1] + 'へ' + m[2] + 'の束を' + m[3] + 'こ加えよう。'; },
+      function (m) { return m[1] + 'に、' + m[2] + 'のまとまりを' + m[3] + 'こ足すといくつ？'; }
+    ] },
+    { match: /^(.+)この部品を、同じ数ずつ(.+)ケースに分ける。1ケース分を選ぼう。$/, build: [
+      function (m) { return m[1] + 'この部品を' + m[2] + 'ケースへ同じ数ずつ配る。1ケース分を選ぼう。'; },
+      function (m) { return m[2] + 'ケースに同じ数ずつ入れると、1ケースは何こ？ その分を選ぼう。'; }
+    ] },
+    { match: /^(.+)と(.+)の場面に合う式は？$/, build: [
+      function (m) { return m[1] + 'と' + m[2] + 'の場面を式で表すと？'; },
+      function (m) { return 'この場面(' + m[1] + 'と' + m[2] + ')に合う式はどれ？'; }
+    ] }
+  ]);
+
+  function paraphrasePrompt(prompt, rng) {
+    const text = String(prompt || '');
+    for (let index = 0; index < PROMPT_PARAPHRASES.length; index += 1) {
+      const rule = PROMPT_PARAPHRASES[index];
+      const matched = text.match(rule.match);
+      if (!matched) continue;
+      const choice = rand(0, rule.build.length, rng);
+      return choice === 0 ? text : rule.build[choice - 1](matched);
+    }
+    return text;
+  }
+
   // 一度目の誤答で出すヒントと、二度目に見せる言い換えを必ず用意する。
   // 小1側と支援の段数をそろえ、学年で手厚さが変わらないようにする。
   function secondaryHint(question) {
@@ -245,6 +359,7 @@
     question.stageIndex = meta.stageIndex;
     question.canonicalSkillId = meta.stage.canonicalSkillId || FALLBACK_STAGES[meta.lineId][meta.stageIndex][1];
     question.checkpoint = meta.stageIndex === 4 || meta.stageIndex === 10;
+    if (!question.bareCalculation) question.prompt = paraphrasePrompt(question.prompt, rng);
     question.explain = enrichExplain(question);
     question.hints = [question.hint, secondaryHint(question)]
       .filter(function (value, index, list) { return value && list.indexOf(value) === index; });

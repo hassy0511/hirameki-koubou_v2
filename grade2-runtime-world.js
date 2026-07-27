@@ -88,6 +88,128 @@
     return hashString(JSON.stringify(semantic));
   }
 
+  // 同じステージを遊び直したとき、毎回まったく同じ文が同じ順で並ぶと
+  // 「さっきと同じ」に見えて、考える気が続かない。
+  // 数と問うている内容はそのままに、言い回しだけを替える。
+  const PROMPT_PARAPHRASES = Object.freeze([
+    { match: /^ものさしの(.+)cmから(.+)cmまで。長さは？$/, build: [
+      function (m) { return 'ものさしの' + m[1] + 'cmから' + m[2] + 'cmまでの長さは？'; },
+      function (m) { return m[1] + 'cmの目もりから' + m[2] + 'cmの目もりまで、何cm？'; }
+    ] },
+    { match: /^(.+)mmと同じ長さは？$/, build: [
+      function (m) { return m[1] + 'mmをcmとmmで表すと？'; },
+      function (m) { return m[1] + 'mmと等しい長さはどれ？'; }
+    ] },
+    { match: /^(.+)cm(.+)mmは、全部で何mm？$/, build: [
+      function (m) { return m[1] + 'cm' + m[2] + 'mmをmmだけで表すと？'; },
+      function (m) { return m[1] + 'cm' + m[2] + 'mmは何mmになる？'; }
+    ] },
+    { match: /^(.+)dLカップで(.+)dL入れよう。$/, build: [
+      function (m) { return m[1] + 'dLのカップを使って、' + m[2] + 'dLになるまで入れよう。'; },
+      function (m) { return m[2] + 'dLになるように、' + m[1] + 'dLカップで入れよう。'; }
+    ] },
+    { match: /^(.+)mLは何dL？$/, build: [
+      function (m) { return m[1] + 'mLをdLで表すと？'; },
+      function (m) { return m[1] + 'mLは何dLと同じ？'; }
+    ] },
+    { match: /^(.+)から(.+)まで、何分？$/, build: [
+      function (m) { return m[1] + 'から' + m[2] + 'までの時間は何分？'; },
+      function (m) { return m[1] + 'から' + m[2] + 'までは何分かかる？'; }
+    ] },
+    { match: /^長方形になる条件は？$/, build: [
+      function () { return '長方形といえるのはどれ？'; },
+      function () { return '長方形の決まりとして正しいのは？'; }
+    ] },
+    { match: /^直角三角形の説明は？$/, build: [
+      function () { return '直角三角形といえるのはどれ？'; },
+      function () { return '直角三角形の決まりとして正しいのは？'; }
+    ] },
+    { match: /^形の大きさを変えず、向きだけ変える操作は？$/, build: [
+      function () { return '大きさはそのままで、向きだけ変えるには？'; },
+      function () { return '形を変えずに向きだけ変える動かし方は？'; }
+    ] },
+    { match: /^箱の面になる形は？$/, build: [
+      function () { return '箱の面にあたる形はどれ？'; },
+      function () { return '箱を作っている面の形は？'; }
+    ] },
+    { match: /^正方形の条件を二つ選んだ説明は？$/, build: [
+      function () { return '正方形の決まりを二つ正しく言っているのは？'; },
+      function () { return '正方形といえる説明はどれ？'; }
+    ] },
+    { match: /^この表と同じグラフは、(.+)の○がいくつ？$/, build: [
+      function (m) { return '表と同じグラフにすると、' + m[1] + 'の○はいくつ？'; },
+      function (m) { return '表のとおりにグラフを作ると、' + m[1] + 'の○は何こ？'; }
+    ] },
+    { match: /^元のカードは全部で(.+)枚。表の合計も(.+)。何を確かめられる？$/, build: [
+      function (m) { return 'カードは' + m[1] + '枚、表の合計も' + m[2] + '。ここから何が分かる？'; },
+      function (m) { return '元の' + m[1] + '枚と表の合計' + m[2] + 'が同じ。これで何を確かめられる？'; }
+    ] },
+    { match: /^(.+)cmの点から、(.+)cmの直線を引く。終わりの目盛りは？$/, build: [
+      function (m) { return m[1] + 'cmの目もりから' + m[2] + 'cmの直線を引くと、終わりはどこ？'; },
+      function (m) { return m[1] + 'cmを始点に' + m[2] + 'cm引いた。終わりの目もりは？'; }
+    ] },
+    { match: /^(.+)dLと同じかさは？$/, build: [
+      function (m) { return m[1] + 'dLをLとdLで表すと？'; },
+      function (m) { return m[1] + 'dLと等しいかさはどれ？'; }
+    ] },
+    { match: /^容器の目盛りが(.+)mL。正しい読み方は？$/, build: [
+      function (m) { return m[1] + 'mLの目もり。正しい読み方はどれ？'; },
+      function (m) { return '目もりが' + m[1] + 'mLのとき、正しく読んでいるのは？'; }
+    ] },
+    { match: /^一日は何時間？$/, build: [
+      function () { return '一日は全部で何時間ある？'; },
+      function () { return '午前と午後を合わせると、一日は何時間？'; }
+    ] },
+    { match: /^正方形の同じ長さの辺を点灯しよう。$/, build: [
+      function () { return '正方形で長さの等しい辺を点灯しよう。'; },
+      function () { return '正方形の辺のうち、同じ長さのものを点灯しよう。'; }
+    ] },
+    { match: /^数え落としを防ぐやり方は？$/, build: [
+      function () { return '数え落とさないためには、どうする？'; },
+      function () { return '一つも見落とさずに数える方法はどれ？'; }
+    ] },
+    { match: /^一次元の表で必要なものは？$/, build: [
+      function () { return '一次元の表に欠かせないものはどれ？'; },
+      function () { return '表を作るとき、必ず入れるものは？'; }
+    ] },
+    { match: /^三つの種類を合わせると全部でいくつ？$/, build: [
+      function () { return '三種類を合わせると、全部で何こ？'; },
+      function () { return '三つの種類の数を合計するといくつ？'; }
+    ] },
+    { match: /^答えを出すために必要な情報は？$/, build: [
+      function () { return '答えを出すには、どの情報がいる？'; },
+      function () { return 'この問題を解くのに使う情報はどれ？'; }
+    ] },
+    { match: /^(.+)を どの棚へ入れる？$/, build: [
+      function (m) { return m[1] + 'は、どの棚の仲間？'; },
+      function (m) { return m[1] + 'を入れる棚はどれ？'; }
+    ] },
+    { match: /^(.+)cmのところまで 目盛りを点灯しよう。$/, build: [
+      function (m) { return '0から' + m[1] + 'cmまで、目もりを点灯しよう。'; },
+      function (m) { return m[1] + 'cmの目もりまで光らせよう。'; }
+    ] },
+    { match: /^工作で使うテープを、(.+)の目盛りから(.+)cmまで切る。長さは何cm？$/, build: [
+      function (m) { return 'テープを' + m[1] + 'の目もりから' + m[2] + 'cmまで切った。長さは何cm？'; },
+      function (m) { return m[1] + 'の目もりから' + m[2] + 'cmのところまでテープを切る。何cm？'; }
+    ] },
+    { match: /^(.+)dLカップで(.+)dL入れよう。$/, build: [
+      function (m) { return m[1] + 'dLのカップを使って' + m[2] + 'dLにしよう。'; },
+      function (m) { return m[2] + 'dLになるまで' + m[1] + 'dLカップで注ごう。'; }
+    ] }
+  ]);
+
+  function paraphrasePrompt(prompt, rng) {
+    const text = String(prompt || '');
+    for (let index = 0; index < PROMPT_PARAPHRASES.length; index += 1) {
+      const rule = PROMPT_PARAPHRASES[index];
+      const matched = text.match(rule.match);
+      if (!matched) continue;
+      const choice = rand(0, rule.build.length, rng);
+      return choice === 0 ? text : rule.build[choice - 1](matched);
+    }
+    return text;
+  }
+
   // 一度目の誤答で出すヒントと、二度目に見せる言い換えを必ず用意する。
   function secondaryHint(question) {
     const math = question.math || {};
@@ -138,6 +260,7 @@
       showHint: false
     }, data || {});
     if (!APP_KINDS.includes(question.kind)) throw new Error('Unsupported G2 question kind: ' + question.kind);
+    if (!question.bareCalculation && !question.formulaOnly) question.prompt = paraphrasePrompt(question.prompt, rng);
     question.explain = enrichExplain(question);
     question.hints = [question.hint, secondaryHint(question)]
       .filter(function (value, index, list) { return value && list.indexOf(value) === index; });
