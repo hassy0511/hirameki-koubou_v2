@@ -976,14 +976,18 @@
       // 選んでから「けってい」で確定する文法は、学年で変えない。
       // 学年をまたぐと、同じタップが確定になったり選択になったりして混乱する。
       const stagedChoice = session && session.mode !== 'timeAttack';
+      // 選択状態は question.input とは別に持つ。
+      // input には生成時の初期値が入っていることがあり、それを選択済みとして扱うと
+      // 子どもが何も選んでいないのに誤答が選ばれて見え、「けってい」も押せてしまう。
+      const chosen = question.choiceSelection;
       const buttons = '<div class="' + answerLayoutClass(question) + '">' + (question.options || []).map(function (option) {
         const value = String(optionValue(option));
-        const selected = stagedChoice && String(question.input) === value;
+        const selected = stagedChoice && chosen != null && String(chosen) === value;
         const answerAttribute = stagedChoice ? 'data-select-answer' : 'data-answer';
         return '<button class="answer-button' + (selected ? ' selected' : '') + (question.visual && question.visual.type === 'measure-method' ? ' method-answer' : '') + '" style="' + lineStyle(line) + '" ' + answerAttribute + '="' + attr(value) + '" aria-pressed="' + selected + '">' + answerButtonContent(option, question) + '</button>';
       }).join('') + '</div>';
       if (!stagedChoice) return buttons;
-      return buttons + '<div class="submit-row choice-submit"><button class="primary-button" style="' + lineStyle(line) + '" data-action="submit-choice" ' + (String(question.input) === '' ? 'disabled' : '') + '>これで けってい</button></div>';
+      return buttons + '<div class="submit-row choice-submit"><button class="primary-button" style="' + lineStyle(line) + '" data-action="submit-choice" ' + (chosen == null ? 'disabled' : '') + '>これで けってい</button></div>';
     }
     if (question.kind === 'tap' || question.kind === 'remove' || question.kind === 'select') {
       if (question.visual && question.visual.type === 'unit-length-builder') {
@@ -1132,6 +1136,7 @@
   function resetQuestionInteraction(question) {
     question.selected = [];
     question.orderSelected = [];
+    question.choiceSelection = null;
     question.input = question.initialInput == null ? '' : question.initialInput;
   }
 
@@ -1784,7 +1789,7 @@
     if (selectedAnswer) {
       const question = currentQuestion();
       if (!question || question.feedback) return;
-      question.input = selectedAnswer.dataset.selectAnswer;
+      question.choiceSelection = selectedAnswer.dataset.selectAnswer;
       playTone('tap');
       render();
       return;
@@ -1924,7 +1929,10 @@
       switchLine(actionNode.dataset.line, false);
       startStage(Number(actionNode.dataset.stage), actionNode.dataset.line);
     }
-    else if (action === 'submit-choice') handleAnswer(currentQuestion() && currentQuestion().input);
+    else if (action === 'submit-choice') {
+      const question = currentQuestion();
+      if (question && question.choiceSelection != null) handleAnswer(question.choiceSelection);
+    }
     else if (action === 'submit-operation') handleAnswer(normalizeQuestionInput(currentQuestion()));
     else if (action === 'reset-operation') { resetQuestionInteraction(currentQuestion()); render(); }
     else if (action === 'retry-question') retryQuestion();

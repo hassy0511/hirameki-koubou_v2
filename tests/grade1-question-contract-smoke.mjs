@@ -115,6 +115,13 @@ assert(equalGroups.every(question => !String(question.instruction).includes(Stri
 
 assert(appSource.includes('data-select-answer'), '通常モードで選択と確定が分かれていません');
 assert(appSource.includes("action === 'submit-choice'"), '選択式の「けってい」処理がありません');
+// 選択状態は question.input と分けて持つ。
+// input には生成時の初期値が入るため、それを選択済みとして扱うと
+// 子どもが何も選んでいないのに誤答が選ばれて見え、確定も押せてしまう。
+assert(appSource.includes('question.choiceSelection'), '選択状態を問題の初期値と分けて持っていません');
+assert(!/const selected = stagedChoice && String\(question\.input\)/.test(appSource), '選択状態が問題の初期値に依存しています');
+assert(/choiceSelection = null/.test(appSource), 'やりなおしで選択状態が消えません');
+assert(!/stagedChoice = activeCourseId === 'g1'/.test(appSource), '確定文法が学年によって変わっています');
 assert(appSource.includes("question.attempts >= 2"), '二回目の誤答で支援が進みません');
 assert(appSource.includes("kind: 'teach'"), '正解説明へ進む段階支援がありません');
 assert(appSource.includes("question.kind === 'numberline'"), '歩ける数直線UIがありません');
