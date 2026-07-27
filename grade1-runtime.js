@@ -64,15 +64,19 @@
     ]),
     subtraction: Object.freeze([
       contract('tap', { sourceRound: 1 }),
-      contract('remove', { sourceRound: 0 }),
+      // 取る操作と「のこりは いくつ？」は、同じ引き算の表と裏。
+      // 取るだけでは問題文の数をタップして終わるので、必ず組で出す。
+      paired(['remove', 'choice']),
       contract('choice'),
       contract('numberline', { sourceRound: 1 }),
       assessment({ reviewPlan: [0, 1, 2, 3, 0, 1, 2, 3] }),
-      contract('remove', { sourceRound: 1 }),
+      // 契約外の問題(場面問題など)はここへ寄せられる。
+      // のこりを答える問題なので、寄せ先は「取る」ではなく数を作る操作にする。
+      paired(['slider', 'remove']),
       contract('numberline'),
       contract('choice'),
       contract('numberline'),
-      contract('remove', { custom: 'placeValueRemove' }),
+      paired(['remove', 'choice'], { custom: 'placeValueRemove' }),
       assessment({ reviewPlan: [0, 1, 2, 3, 5, 6, 7, 8] })
     ]),
     measure: Object.freeze([
@@ -430,9 +434,14 @@
 
   function sceneVariants(question) {
     const math = question.math || {};
-    if (math.kind === 'add' && Number.isFinite(Number(math.a)) && Number.isFinite(Number(math.b))) return SCENE_TEMPLATES.add;
-    if (math.kind === 'subtract' && Number.isFinite(Number(math.a)) && Number.isFinite(Number(math.b))) return SCENE_TEMPLATES.subtract;
-    if (math.kind === 'bond' && Number.isFinite(Number(math.target)) && Number.isFinite(Number(math.known))) return SCENE_TEMPLATES.bond;
+    const answer = Number(question.correct);
+    // 場面文は「あわせて いくつ？」「のこりは いくつ？」と結果をたずねる。
+    // 答えが結果でない問題(取る数をタップする等)へ当てると、
+    // 問題文と採点される値が食い違う。
+    const asksResult = Number.isFinite(answer) && answer === Number(math.result);
+    if (math.kind === 'add' && asksResult && Number.isFinite(Number(math.a)) && Number.isFinite(Number(math.b))) return SCENE_TEMPLATES.add;
+    if (math.kind === 'subtract' && asksResult && Number.isFinite(Number(math.a)) && Number.isFinite(Number(math.b))) return SCENE_TEMPLATES.subtract;
+    if (math.kind === 'bond' && answer === Number(math.target) - Number(math.known) && Number.isFinite(Number(math.target)) && Number.isFinite(Number(math.known))) return SCENE_TEMPLATES.bond;
     const visual = question.visual || {};
     if (!math.kind && ['objects', 'five-frame'].includes(visual.type) && Number(question.correct) === Number(visual.count)) return SCENE_TEMPLATES.count;
     return null;
@@ -566,6 +575,32 @@
   }
 
   function placeValueRemoveQuestion(round, rng) {
+    // 取る数は問題文に書いてあるので、取る操作だけでは引き算にならない。
+    // 導入の2問で「10のまとまりを外す」を手で体験し、そのあとは のこりを答える。
+    if (round >= 2) {
+      const tens = core.rand(3, 9, rng);
+      const ones = core.rand(2, 9, rng);
+      const useTens = round % 2 === 0;
+      const a = tens * 10 + (useTens ? 0 : ones);
+      let b = useTens ? core.rand(1, tens - 1, rng) * 10 : core.rand(1, ones - 1, rng);
+      // のこりが引く数と同じだと、答えがそのまま問題文に出てしまう
+      if (a - b === b) b = useTens ? Math.max(10, b - 10) : Math.max(1, b - 1);
+      const result = a - b;
+      return {
+        canonicalSkillId: core.SUBTRACTION_STAGES[9].canonicalSkillId,
+        kind: 'choice',
+        prompt: a + 'から ' + b + 'を とりました。のこりは いくつ？',
+        correct: result,
+        min: 0,
+        max: 100,
+        visual: { type: 'place-value-remove', a, b },
+        hint: useTens ? '10の まとまりの かずで くらべよう。' : '10の まとまりは そのまま。ばらだけ へらそう。',
+        explain: a + 'から ' + b + 'を へらすと ' + result + '。',
+        math: { kind: 'subtract', a, b, result, mode: useTens ? 'tens' : 'ones' },
+        answerDerived: true,
+        templateId: 'subtraction.place.remainder'
+      };
+    }
     const tensMode = round % 2 === 0;
     if (tensMode) {
       const tens = core.rand(4, 10, rng);

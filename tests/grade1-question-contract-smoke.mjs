@@ -159,6 +159,51 @@ for (const stageIndex of [7, 8, 9]) {
   assert(offsets.size > 1, 'measure/' + stageIndex + ': 針の初期位置が正解からの固定のずれです');
 }
 
+// 盤面は「問題の状態」を見せる。「答えの形」を先に見せない。
+// 置き場のタップできる数が答えとちょうど同じだと、全部タップするだけで正解できる。
+for (const [lineId, stageIndex] of [['number', 5], ['addition', 1], ['subtraction', 0]]) {
+  for (const seed of [5501, 5502, 5503]) {
+    core.makeStageQuestions(lineId, stageIndex, { seed }).questions.forEach(question => {
+      const visual = question.visual || {};
+      if (visual.type !== 'bond-builder') return;
+      const missing = Math.max(0, Number(visual.target) - Number(visual.known));
+      assert.equal(Number(question.correct), missing, lineId + ': 数の分解の答えが合いません');
+      assert(Math.max(10, Number(visual.target)) > missing, lineId + ': 置き場に答えの数ちょうどしか丸がありません');
+    });
+  }
+}
+// app.js 側でも、置き場を「たりない数」で描いていないこと。
+assert(!/repeat\(missing,/.test(appSource), '数の分解の盤面が、答えの数だけ枠を描いています');
+// 確定するまで、合っているかどうかを盤面が教えないこと。
+assert(/const settled = Boolean\(question\.feedback\)/.test(appSource), '等分盤面が確定前に過不足を出しています');
+
+// 引き算は「とった数」だけでなく「のこり」を答える問題を含むこと。
+for (const stageIndex of [1, 5, 9]) {
+  const stage = core.LINES.subtraction.stages[stageIndex];
+  let asksRemainder = 0;
+  let total = 0;
+  for (const seed of [5601, 5602, 5603]) {
+    core.makeStageQuestions('subtraction', stageIndex, { seed }).questions.forEach(question => {
+      const math = question.math || {};
+      if (math.kind !== 'subtract') return;
+      total += 1;
+      if (Number(question.correct) === Number(math.result)) asksRemainder += 1;
+    });
+  }
+  assert(asksRemainder * 2 >= total, 'subtraction/' + stage.id + ': のこりを答える問題が半分もありません');
+}
+
+// 問題文がたずねている値と、採点される値が食い違わないこと。
+for (const lineId of core.LINE_ORDER) {
+  for (let stageIndex = 0; stageIndex < 11; stageIndex += 1) {
+    core.makeStageQuestions(lineId, stageIndex, { seed: 5700 + stageIndex }).questions.forEach(question => {
+      const math = question.math || {};
+      if (math.kind !== 'subtract' || !/のこり/.test(question.prompt)) return;
+      assert.equal(Number(question.correct), Number(math.result), lineId + '/' + stageIndex + ': 「のこり」を聞いて、とった数を採点しています → ' + question.prompt);
+    });
+  }
+}
+
 const expressionPacks = [
   core.makeStageQuestions('solve', 6, { seed: 551 }),
   core.makeStageQuestions('solve', 8, { seed: 552 })

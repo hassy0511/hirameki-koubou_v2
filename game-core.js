@@ -205,7 +205,14 @@
       result.add(value);
       cursor += 1;
     }
-    while (result.size < (count || 4)) result.add(rand(min, max, rng));
+    // 範囲に候補が足りないと、この補充は永久に終わらない。
+    // 取りうる値の数を上限にして、足りなければ少ない選択肢のまま返す。
+    const room = Math.max(1, Math.floor(max) - Math.ceil(min) + 1);
+    let guard = 0;
+    while (result.size < (count || 4) && result.size < room && guard < room * 8) {
+      result.add(rand(min, max, rng));
+      guard += 1;
+    }
     return shuffle(Array.from(result), rng);
   }
 
@@ -629,6 +636,18 @@
     return correct + (tail === 'だよ。' ? 'だよ。' : 'だ' + tail);
   }
 
+  // のこりを答えさせる問題で、のこりが「引く数」と同じ(a が b の2倍)だと、
+  // 答えがそのまま問題文に出てしまう。1ずらして避ける。
+  function avoidVisibleRemainder(values) {
+    if (values[2] !== values[1]) return values;
+    if (values[1] > 1) {
+      const b = values[1] - 1;
+      return [values[0], b, values[0] - b];
+    }
+    const a = values[0] + 1;
+    return [a, values[1], a - values[1]];
+  }
+
   function additionValues(max, carry, rng) {
     let a;
     let b;
@@ -873,7 +892,7 @@
   }
 
   function subtractionStory(max, borrow, rng) {
-    const values = subtractionValues(max, borrow, rng);
+    const values = avoidVisibleRemainder(subtractionValues(max, borrow, rng));
     const scenes = [
       ['おはじき', 'はこ'],
       ['どんぐり', 'ふくろ'],
@@ -921,6 +940,25 @@
       const values = subtractionValues(10, false, rng);
       if (values[1] === 0) values[1] = 1;
       values[2] = values[0] - values[1];
+      // 取る操作だけでは、問題文に書かれた数をタップして終わりになり、
+      // ステージ名が約束する「のこりは いくつ？」を一度も考えないまま正解できる。
+      // 導入の2問で「へらす」を手で体験し、そのあとは のこりを答える。
+      if (round >= 2) {
+        const shown = avoidVisibleRemainder(values);
+        values[0] = shown[0]; values[1] = shown[1]; values[2] = shown[2];
+        return numericQuestion({
+          canonicalSkillId: SUBTRACTION_STAGES[1].canonicalSkillId,
+          kind: 'choice',
+          prompt: values[0] + 'この まるから ' + values[1] + 'こ とりました。のこりは いくつ？',
+          correct: values[2],
+          min: 0,
+          max: 10,
+          visual: { type: 'story', icons: ['count-dot'], counts: [values[0], values[1]], operation: '-' },
+          hint: 'はじめの ' + values[0] + 'こから、とった ' + values[1] + 'こを へらそう。',
+          explain: values[0] + 'こから ' + values[1] + 'こ へると ' + values[2] + 'こ のこる。',
+          math: { kind: 'subtract', a: values[0], b: values[1], result: values[2] }
+        }, rng);
+      }
       return selectorQuestion(values[1], values[0], {
         canonicalSkillId: SUBTRACTION_STAGES[1].canonicalSkillId,
         kind: 'remove',
@@ -969,15 +1007,20 @@
       return retagQuestion(q, { checkpoint: true, assessmentFor: SUBTRACTION_STAGES[4].canonicalSkillId });
     }
     if (stageIndex === 5) {
-      const values = subtractionValues(20, false, rng);
+      let values = subtractionValues(20, false, rng);
+      if (round >= 2) values = avoidVisibleRemainder(values);
       return numericQuestion({
         canonicalSkillId: SUBTRACTION_STAGES[5].canonicalSkillId,
-        kind: round % 2 ? 'remove' : 'slider',
-        prompt: values[0] + 'この まるから ' + values[1] + 'こ とろう。',
-        correct: round % 2 ? values[1] : values[2],
+        // 取る操作の問題と、のこりを答える問題では、たずねていることが違う。
+        // 同じ文を使い回すと、文は「とろう」なのに採点は「のこり」になる。
+        kind: round < 2 ? 'remove' : 'slider',
+        prompt: round < 2
+          ? values[0] + 'この まるから ' + values[1] + 'こ とろう。'
+          : values[0] + 'この まるから ' + values[1] + 'こ とりました。のこりは いくつ？',
+        correct: round < 2 ? values[1] : values[2],
         min: 0,
         max: 20,
-        start: values[0],
+        start: round < 2 ? values[0] : 0,
         visual: { type: 'ten-bundle-remove', a: values[0], b: values[1] },
         hint: '10の まとまりは そのまま。ばらを へらそう。',
         explain: values[0] + '−' + values[1] + '＝' + values[2] + '。',

@@ -755,10 +755,12 @@
     const visual = question.visual || {};
     const known = Math.max(0, Number(visual.known) || 0);
     const target = Math.max(known, Number(visual.target) || known);
-    const missing = Math.max(0, target - known);
     const selected = new Set(question.selected || []);
-    return '<div class="visual-board" style="' + lineStyle(line) + '"><div class="bond-builder"><div><small>いま ある かず</small>' + tenFrame(known) + '</div><span class="operation-symbol">＋</span><div><small>たりない ぶん</small><div class="bond-empty-grid">' + repeat(missing, function (index) {
-      return '<button class="tap-piece bond-piece ' + (selected.has(index) ? 'selected' : '') + '" data-piece="' + index + '" aria-label="たりない まる ' + (index + 1) + '" aria-pressed="' + selected.has(index) + '">' + visualTokenHtml('count-dot') + '</button>';
+    // 置き場に「たりない数」ちょうどしか丸を出さないと、全部タップするだけで正解になる。
+    // 置き場は常に多めに用意し、いくつ持っていくかを子どもが決める形にする。
+    const supply = Math.max(10, target);
+    return '<div class="visual-board" style="' + lineStyle(line) + '"><div class="bond-builder"><div><small>いま ある かず</small>' + tenFrame(known) + '</div><span class="operation-symbol">＋</span><div><small>ここから いれる</small><div class="bond-empty-grid">' + repeat(supply, function (index) {
+      return '<button class="tap-piece bond-piece ' + (selected.has(index) ? 'selected' : '') + '" data-piece="' + index + '" aria-label="いれる まる ' + (index + 1) + '" aria-pressed="' + selected.has(index) + '">' + visualTokenHtml('count-dot') + '</button>';
     }) + '</div></div><strong class="bond-target">あわせて ' + target + 'こ</strong></div></div>';
   }
 
@@ -800,9 +802,15 @@
     const each = share ? amount : Number(visual.perGroup);
     const used = boxCount * each;
     const difference = Number(visual.total) - used;
+    // 「ぴったり おなじ！」を確定前に出すと、表示が変わるまで＋−を動かすだけで正解できる。
+    // 過不足を言うのは「けってい」のあと。動かしている間は、配った結果だけを見せる。
+    const settled = Boolean(question.feedback);
+    const status = settled
+      ? (difference === 0 ? 'ぴったり おなじ！' : difference > 0 ? 'あと ' + difference + 'こ のこっているよ' : Math.abs(difference) + 'こ おおすぎるよ')
+      : 'くばった ぶん：' + used + 'こ';
     return '<div class="visual-board" style="' + lineStyle(line) + '"><div class="groups-builder"><div class="groups-pool"><small>ぜんぶ</small><strong>' + visual.total + 'こ</strong></div><div class="groups-preview">' + repeat(boxCount, function (index) {
       return '<div class="group-box-preview"><small>' + (share ? (index + 1) + 'にんめ' : (index + 1) + 'こめ') + '</small>' + miniParts(each) + '</div>';
-    }) + '</div><p class="groups-balance ' + (difference === 0 ? 'balanced' : '') + '">' + (difference === 0 ? 'ぴったり おなじ！' : difference > 0 ? 'あと ' + difference + 'こ のこっているよ' : Math.abs(difference) + 'こ おおすぎるよ') + '</p></div></div>';
+    }) + '</div><p class="groups-balance ' + (settled && difference === 0 ? 'balanced' : '') + '">' + status + '</p></div></div>';
   }
 
   function visualHtml(question, line) {
