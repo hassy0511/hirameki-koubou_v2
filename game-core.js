@@ -909,7 +909,7 @@
       return finalizeQuestion({
         canonicalSkillId: SUBTRACTION_STAGES[2].canonicalSkillId,
         kind: 'choice',
-        prompt: b === 0 ? 'まるを 一つも とらない。のこりは？' : 'まるを ぜんぶ とる。のこりは？',
+        prompt: b === 0 ? 'まるを 一つも とらないと、のこりは いくつ？' : 'まるを ぜんぶ とったら、のこりは いくつ？',
         correct,
         options: numberChoices(correct, 0, 10, 4, rng),
         visual: { type: 'switch', total: a, mode: b === 0 ? 'none' : 'all' },
@@ -1463,6 +1463,21 @@
     return counts;
   }
 
+  // 文章題では「0こ とりました」「ぜんぶ とりました」は場面として成立しない。
+  // 0そのものを学ぶステージ以外では、引く数と残りが1以上になるまで作り直す。
+  function storySubtractionValues(rng) {
+    let values = subtractionValues(10, false, rng);
+    for (let guard = 0; guard < 12 && (values[1] === 0 || values[2] === 0); guard += 1) {
+      values = subtractionValues(10, false, rng);
+    }
+    if (values[1] === 0 || values[2] === 0) {
+      const a = Math.max(3, values[0]);
+      const b = Math.max(1, Math.min(a - 1, values[1] || 1));
+      return [a, b, a - b];
+    }
+    return values;
+  }
+
   function operationStory(rng) {
     const isAdd = rand(0, 1, rng) === 1;
     if (isAdd) {
@@ -1475,7 +1490,7 @@
         math: { kind: 'add', a: values[0], b: values[1], result: values[2] }
       };
     }
-    const values = subtractionValues(10, false, rng);
+    const values = storySubtractionValues(rng);
     return {
       text: 'はこに おはじきが' + values[0] + 'こ。' + values[1] + 'こ とりました。',
       operation: 'ひきざん',

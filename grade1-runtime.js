@@ -147,37 +147,62 @@
     });
   }
 
+  // 見た目だけを変える飾りの値。学習内容の同一判定からは外す。
+  const COSMETIC_VISUAL_KEYS = Object.freeze(['layoutVariant', 'materialVariant']);
+
+  function learningVisual(visual) {
+    const copy = Object.assign({}, visual || {});
+    COSMETIC_VISUAL_KEYS.forEach(function (key) { delete copy[key]; });
+    return copy;
+  }
+
+  function zeroIsMeaningful(question) {
+    if (Number(question.correct) === 0) return true;
+    const skill = String(question.sourceCanonicalSkillId || question.canonicalSkillId || '');
+    return /zero/.test(skill);
+  }
+
   function numericMisconceptions(question, rng) {
     const correct = Number(question.correct);
     const min = Number.isFinite(Number(question.min)) ? Number(question.min) : Math.max(0, correct - 10);
     const max = Number.isFinite(Number(question.max)) ? Number(question.max) : Math.max(20, correct + 10);
     const math = question.math || {};
-    const candidates = [correct];
+    // 数える問題で「0」を誤答に出すと、丸が見えているのに0という不自然な選択肢になる
+    const allowZero = zeroIsMeaningful(question);
+    const floor = allowZero ? min : Math.max(min, 1);
+    const misconceptions = [];
     if (math.kind === 'add') {
-      candidates.push(math.a, math.b, Math.abs(math.a - math.b), correct - 1, correct + 1);
+      // 片方の数だけを答える／引いてしまう／1ずれ
+      misconceptions.push(math.a, math.b, correct + 1, correct - 1);
+      if (Number(math.a) !== Number(math.b)) misconceptions.push(Math.abs(math.a - math.b));
     } else if (math.kind === 'subtract') {
-      candidates.push(Number(math.a) + Number(math.b), math.b, math.a, correct - 1, correct + 1);
+      // たしてしまう／引く数や引かれる数をそのまま答える／1ずれ
+      misconceptions.push(Number(math.a) + Number(math.b), math.b, math.a, correct + 1, correct - 1);
     } else if (math.kind === 'bond') {
-      candidates.push(math.known, math.target, correct - 1, correct + 1);
+      misconceptions.push(math.known, math.target, correct + 1, correct - 1);
     } else if (math.kind === 'sequence') {
       const first = Number(math.values && math.values[0] || 0);
       const second = Number(math.values && math.values[1] || 0);
       const firstResult = math.ops && math.ops[0] === '-' ? first - second : first + second;
-      candidates.push(firstResult, correct - 1, correct + 1, first);
+      misconceptions.push(firstResult, first, correct + 1, correct - 1);
     } else if (math.kind === 'groups') {
-      candidates.push(math.groups, math.perGroup, correct - 1, correct + 1, math.total);
+      misconceptions.push(math.groups, math.perGroup, math.total, correct + 1, correct - 1);
     } else {
-      candidates.push(correct - 1, correct + 1, correct - 2, correct + 2);
-      if (correct >= 10) candidates.push(Number(String(correct).split('').reverse().join('')));
+      misconceptions.push(correct + 1, correct - 1, correct + 2, correct - 2);
+      if (correct >= 10) misconceptions.push(Number(String(correct).split('').reverse().join('')));
     }
-    const bounded = uniqueOptions(candidates.map(function (value) {
-      return clamp(Number(value), min, max);
-    }));
-    const preferred = bounded.slice(0, 4);
-    for (let distance = 1; preferred.length < 4 && distance <= Math.max(20, max - min); distance += 1) {
+    const usable = uniqueOptions(misconceptions
+      .map(Number)
+      .filter(function (value) { return Number.isFinite(value); })
+      .map(function (value) { return clamp(value, floor, max); })
+      .filter(function (value) { return value !== correct; }));
+    const preferred = [correct].concat(usable).slice(0, 4);
+    // 足りない分は正解の近くから埋めるが、選べる幅が狭いときは無理に4つへ広げない
+    for (let distance = 1; preferred.length < 4 && distance <= Math.max(20, max - floor); distance += 1) {
       [correct - distance, correct + distance].forEach(function (value) {
-        const boundedValue = clamp(value, min, max);
-        if (!preferred.some(function (item) { return item === boundedValue; })) preferred.push(boundedValue);
+        if (value < floor || value > max) return;
+        if (preferred.length >= 4) return;
+        if (!preferred.includes(value)) preferred.push(value);
       });
     }
     return core.shuffle(preferred.slice(0, 4), rng);
@@ -281,26 +306,119 @@
     return 'すうじを いれて「けってい」';
   }
 
+  // 「すすむ/もどる」は数の線の上でだけ意味を持つ言い回し。
+  // 合流図やダイヤル盤に対して使うと、画面に無い動きを指示することになる。
+  const MOTION_WORDS = /すすも|進も|もどろ|もどる|後ろへ|先へ/;
+
+  function isNumberLineVisual(question) {
+    const type = (question.visual || {}).type || '';
+    return question.kind === 'numberline' || /number-line|rail/.test(type);
+  }
+
   function secondHint(question) {
     const math = question.math || {};
-    if (math.kind === 'add') return math.a + 'から ' + math.b + 'こぶん すすむと どうなるかな。';
-    if (math.kind === 'subtract') return math.a + 'から ' + math.b + 'こぶん もどると どうなるかな。';
-    if (math.kind === 'bond') return math.known + 'から ' + math.target + 'まで、ゆびで 1つずつ かぞえよう。';
+    const type = (question.visual || {}).type || '';
+    const online = isNumberLineVisual(question);
+    if (math.kind === 'add') {
+      if (online) return math.a + 'から ' + math.b + 'こぶん すすもう。';
+      if (type === 'merge' || type === 'story' || type === 'crane') return 'まず ' + math.a + 'こ。そこへ ' + math.b + 'こ くわえて かぞえよう。';
+      return math.a + 'こから さきを、' + math.b + 'こ ゆびで かぞえよう。';
+    }
+    if (math.kind === 'subtract') {
+      if (online) return math.a + 'から ' + math.b + 'こぶん もどろう。';
+      if (type === 'merge' || type === 'story' || type === 'crane') return math.a + 'こから ' + math.b + 'こ へらして、のこりを かぞえよう。';
+      return math.a + 'こ ならべて、' + math.b + 'こ かくして みよう。';
+    }
+    if (math.kind === 'bond') return math.known + 'こから ' + math.target + 'こまで、ゆびで 1つずつ かぞえよう。';
     if (math.kind === 'groups') return 'まるを 1こずつ、どの ばしょにも おなじように くばろう。';
-    if (question.visual && question.visual.type === 'clock-read') return 'ながい はりで ふん、みじかい はりで じを たしかめよう。';
-    if (question.visual && /length|capacity|area/.test(question.visual.type || '')) return '二つの はじまりや、つかった おなじ大きさの ものを たしかめよう。';
+    if (type === 'clock-read') return 'ながい はりで ふん、みじかい はりで じを たしかめよう。';
+    if (/length|capacity|area/.test(type)) return '二つの はじまりや、つかった おなじ大きさの ものを たしかめよう。';
+    if (['objects', 'five-frame', 'selector'].includes(type)) return 'ひだりから、ひとつずつ ゆびで おさえて かぞえよう。';
     return 'みほんと こたえを、ひとつずつ ゆびで たしかめよう。';
   }
 
-  function shortStoryLead(lineId) {
-    return {
-      number: 'トトが かずを たしかめています。',
-      addition: 'トトと モクモの まるを あわせます。',
-      subtraction: 'モクモが まるを つかいました。',
-      measure: 'トトが ざいりょうを しらべています。',
-      shape: 'モクモが みほんの かたちを つくります。',
-      solve: 'トトが しらべた ことを まとめます。'
-    }[lineId];
+  // ビルダー側のヒントは、そのビルダーが受け持つ別ステージの盤面を前提にしている場合がある。
+  // 画面と食い違う言い回しのときだけ、盤面に合わせて作り直す。
+  function resolveHint(question) {
+    const builderHint = question.hint && question.hint !== 'よく見て、もういちど ためそう。' ? String(question.hint) : '';
+    if (!builderHint) return secondHint(question);
+    if (MOTION_WORDS.test(builderHint) && !isNumberLineVisual(question)) return secondHint(question);
+    return builderHint;
+  }
+
+  // 「2＋1＝3。」だけでは、なぜそうなるかが残らない。
+  // 何を どうしたら そうなったのかを、式の前に一文で置く。
+  function enrichExplain(question) {
+    const explain = String(question.explain || '').trim();
+    const math = question.math || {};
+    const formulaOnly = /^[0-9]+\s*[＋−+\-]\s*[0-9]+\s*＝\s*[0-9]+。?$/.test(explain);
+    if (explain && !formulaOnly) return explain;
+    if (math.kind === 'add') {
+      return math.a + 'こと ' + math.b + 'こを あわせると ' + math.result + 'こ。だから ' + math.a + '＋' + math.b + '＝' + math.result + '。';
+    }
+    if (math.kind === 'subtract') {
+      return math.a + 'こから ' + math.b + 'こ へると ' + math.result + 'こ のこる。だから ' + math.a + '−' + math.b + '＝' + math.result + '。';
+    }
+    if (math.kind === 'bond') {
+      return math.known + 'こに ' + question.correct + 'こ たすと ' + math.target + 'こ。' + math.known + 'と' + question.correct + 'で' + math.target + 'だね。';
+    }
+    // mathメタデータを持たないビルダーでも、式だけの解説は文へ直す
+    const parsed = explain.match(/^([0-9]+)\s*([＋−+\-])\s*([0-9]+)\s*＝\s*([0-9]+)。?$/);
+    if (parsed) {
+      const left = parsed[1];
+      const right = parsed[3];
+      const result = parsed[4];
+      const adding = parsed[2] === '＋' || parsed[2] === '+';
+      return adding
+        ? left + 'こと ' + right + 'こを あわせると ' + result + 'こ。だから ' + left + '＋' + right + '＝' + result + '。'
+        : left + 'こから ' + right + 'こ へると ' + result + 'こ のこる。だから ' + left + '−' + right + '＝' + result + '。';
+    }
+    return explain || 'こたえは ' + question.correct + '。もういちど いっしょに たしかめよう。';
+  }
+
+  // 場面問題は「キャラクター名を頭に付ける」ことではなく、
+  // 数の意味が場面として立ち上がる一文を作ることで成立させる。
+  // 盤面に出ているものと同じ「まる」で語り、絵と文がずれないようにする。
+  const SCENE_TEMPLATES = Object.freeze({
+    add: [
+      function (m) { return 'トトが まるを ' + m.a + 'こ、モクモが ' + m.b + 'こ もってきました。あわせて いくつ？'; },
+      function (m) { return 'はこに まるが ' + m.a + 'こ。あとから ' + m.b + 'こ 入れました。ぜんぶで いくつ？'; },
+      function (m) { return 'たなに まるが ' + m.a + 'こと ' + m.b + 'こ あります。あわせて いくつ？'; }
+    ],
+    subtract: [
+      function (m) { return 'まるが ' + m.a + 'こ ありました。' + m.b + 'こ つかいました。のこりは いくつ？'; },
+      function (m) { return 'はこに まるが ' + m.a + 'こ。' + m.b + 'こ とりだしました。のこりは いくつ？'; },
+      function (m) { return 'トトが まるを ' + m.a + 'こ ならべて、' + m.b + 'こ かたづけました。のこりは いくつ？'; }
+    ],
+    bond: [
+      function (m) { return 'はこは まるが ' + m.target + 'こで いっぱいです。いま ' + m.known + 'こ。あと いくつ？'; },
+      function (m) { return 'まるを ' + m.target + 'こ ならべたいです。いま ' + m.known + 'こ あります。あと いくつ？'; }
+    ],
+    count: [
+      function () { return 'トトが まるを ならべました。ぜんぶで いくつ？'; },
+      function () { return 'たなに まるが ならんでいます。ぜんぶで いくつ？'; },
+      function () { return 'モクモが まるを はこに 入れました。ぜんぶで いくつ？'; }
+    ]
+  });
+
+  function sceneVariants(question) {
+    const math = question.math || {};
+    if (math.kind === 'add' && Number.isFinite(Number(math.a)) && Number.isFinite(Number(math.b))) return SCENE_TEMPLATES.add;
+    if (math.kind === 'subtract' && Number.isFinite(Number(math.a)) && Number.isFinite(Number(math.b))) return SCENE_TEMPLATES.subtract;
+    if (math.kind === 'bond' && Number.isFinite(Number(math.target)) && Number.isFinite(Number(math.known))) return SCENE_TEMPLATES.bond;
+    const visual = question.visual || {};
+    if (!math.kind && ['objects', 'five-frame'].includes(visual.type) && Number(question.correct) === Number(visual.count)) return SCENE_TEMPLATES.count;
+    return null;
+  }
+
+  // 場面として書ける問題だけを場面文へ書き換える。
+  // 書けないものへ無理にキャラ文を貼らない(貼ると場面のない「おはなし」になる)。
+  function applyScene(question, rng) {
+    const variants = sceneVariants(question);
+    if (!variants) return false;
+    const template = core.pick(variants, rng);
+    question.prompt = template(question.math || {});
+    return true;
   }
 
   function fixKnownQuestionProblems(question, lineId, stageIndex, variation, rng) {
@@ -326,14 +444,12 @@
       question.prompt = orderPrompts[variation % orderPrompts.length];
       question.visual.layoutVariant = variation % orderPrompts.length;
     }
+    // ステージの意味づけは画面のステージ名(例「たしざんの じゅんび」)が担う。
+    // 同じ文を全8問の問題文へ前置すると、読む量だけが増えて問題文が埋もれる。
     if (lineId === 'addition' && stageIndex === 0) {
-      question.prompt = 'たしざんの じゅんび。' + question.prompt;
       question.templateId = 'addition.prepare.combine';
       question.math = question.math || { kind: 'add', a: question.visual.counts[0], b: question.visual.counts[1], result: question.correct };
     }
-    if (lineId === 'addition' && stageIndex === 1) question.prompt = 'たしざんの かずわけ。' + question.prompt;
-    if (lineId === 'addition' && stageIndex === 5) question.prompt = '20までの たしざんの じゅんび。' + question.prompt;
-    if (lineId === 'subtraction' && stageIndex === 0) question.prompt = 'ひきざんの かずわけ。' + question.prompt;
     if ((lineId === 'number' && stageIndex === 5) || (lineId === 'addition' && stageIndex === 1) || (lineId === 'subtraction' && stageIndex === 0)) {
       if (question.visual && question.visual.type === 'bond') question.visual.type = 'bond-builder';
     }
@@ -462,6 +578,18 @@
     };
   }
 
+  // 子どもが実際に目にする面(問題文・操作・盤面・答え)。
+  // ここが一致する問題は、内部の分類が違っても「さっきと同じ問題」に見える。
+  function visibleKey(question) {
+    return JSON.stringify({
+      kind: question.kind,
+      prompt: question.prompt,
+      instruction: question.instruction,
+      correct: question.correct,
+      visual: question.visual
+    });
+  }
+
   function mappedRound(stageContract, arcRound) {
     if (stageContract.roundPattern) return stageContract.roundPattern[arcRound % stageContract.roundPattern.length];
     if (stageContract.sourceRound != null) return stageContract.sourceRound;
@@ -536,14 +664,12 @@
     fixKnownQuestionProblems(question, lineId, stageContract.assessment ? sourceStageIndex : stageIndex, variation, rng);
     if (question.kind === 'choice' || question.kind === 'route' || question.kind === 'sort') normalizeChoiceOptions(question, rng);
     question.instruction = instructionFor(question);
-    question.hint = question.hint && question.hint !== 'よく見て、もういちど ためそう。' ? question.hint : secondHint(question);
+    question.hint = resolveHint(question);
+    question.explain = enrichExplain(question);
     question.hints = uniqueOptions([question.hint, secondHint(question)]);
     if (question.hints.length < 2) question.hints.push('わかっている ところから、ひとつずつ たしかめよう。');
-    const learningPrompt = question.prompt;
     const learningTemplate = question.templateId || lineId + '.' + stage.id;
-    if (question.story && !String(question.prompt).startsWith(shortStoryLead(lineId))) {
-      question.prompt = shortStoryLead(lineId) + ' ' + question.prompt;
-    }
+    if (question.story) question.sceneApplied = applyScene(question, rng);
     question.templateId = learningTemplate + '.arc-' + question.arcRole;
     question.interactionFamily = lineId + '.' + stage.id + ':' + question.kind;
     question.difficulty = difficultyScore(question);
@@ -554,12 +680,16 @@
     question.attempts = 0;
     question.feedback = null;
     question.showHint = false;
+    // 学習内容としての同一性は「何を問い、答えが何か」で決める。
+    // 並べ方(layoutVariant)や言い回しの違いだけの問題を別物として通さない。
     question.learningSignature = core.questionContentSignature(Object.assign({}, question, {
       canonicalSkillId: question.sourceCanonicalSkillId,
-      prompt: learningPrompt,
+      prompt: '',
+      instruction: '',
       story: false,
       checkpoint: false,
-      templateId: learningTemplate
+      templateId: '',
+      visual: learningVisual(question.visual)
     }));
     question.signature = core.questionSignature(question);
     question.contentSignature = core.questionContentSignature(question);
@@ -600,28 +730,54 @@
     const usedContent = new Set();
     const usedLearning = new Set();
     const questions = [];
+    // 教材が有限なステージ(1〜5を数える等)では、8問すべてを別内容にはできない。
+    // そこで「使い切るまで再利用しない・直前と同じ内容にしない」を優先し、
+    // 同じことをもう一度問うときも、間隔と見た目を必ず変える。
+    const learningUseCount = new Map();
+    const usedVisible = new Set();
+    let previousLearning = null;
     for (let round = 0; round < count; round += 1) {
+      const arcRound = round % ARC.length;
       let best = null;
-      let bestDistance = Infinity;
-      for (let variation = 0; variation < 20; variation += 1) {
-        const raw = rawQuestion(lineId, safeIndex, round % ARC.length, variation, rng);
-        const candidate = normalizeQuestion(raw, lineId, safeIndex, round % ARC.length, variation, rng);
+      let bestScore = Infinity;
+      for (let variation = 0; variation < 24; variation += 1) {
+        const raw = rawQuestion(lineId, safeIndex, arcRound, variation, rng);
+        const candidate = normalizeQuestion(raw, lineId, safeIndex, arcRound, variation, rng);
         if (invalidQuestion(candidate)) continue;
-        const blocked = excluded.has(candidate.signature) || excluded.has(candidate.contentSignature) || excluded.has(candidate.learningSignature) || usedSignatures.has(candidate.signature) || usedContent.has(candidate.contentSignature) || usedLearning.has(candidate.learningSignature);
-        if (blocked) continue;
-        const distance = candidateDistance(candidate, round % ARC.length);
-        if (!best || distance < bestDistance) {
+        // 完全に同一の問題と、直近プレイで出したばかりの問題は必ず避ける
+        if (usedSignatures.has(candidate.signature) || usedContent.has(candidate.contentSignature)) continue;
+        if (excluded.has(candidate.signature) || excluded.has(candidate.contentSignature)) continue;
+        // 見た目まで同じ問題は、一度のステージで二度出さない
+        if (usedVisible.has(visibleKey(candidate))) continue;
+        // 直前の問題と学習内容が同じものは、どれだけ難易度が合っていても選ばない
+        if (candidate.learningSignature === previousLearning) continue;
+        const reuse = learningUseCount.get(candidate.learningSignature) || 0;
+        const recentlyPlayed = excluded.has(candidate.learningSignature) ? 1 : 0;
+        const score = reuse * 10 + recentlyPlayed * 4 + candidateDistance(candidate, arcRound);
+        if (!best || score < bestScore) {
           best = candidate;
-          bestDistance = distance;
+          bestScore = score;
         }
-        if (distance <= 0.08) break;
+        if (score <= 0.08) break;
       }
       if (!best) {
-        best = normalizeQuestion(rawQuestion(lineId, safeIndex, round % ARC.length, 99 + round, rng), lineId, safeIndex, round % ARC.length, 99 + round, rng);
+        // 候補が尽きたときは重複回避だけを譲る。
+        // 「−0」「全部引く」などの成立しない問題は、ここでも通さない。
+        for (let attempt = 0; attempt < 12 && !best; attempt += 1) {
+          const variation = 99 + round * 12 + attempt;
+          const fallback = normalizeQuestion(rawQuestion(lineId, safeIndex, arcRound, variation, rng), lineId, safeIndex, arcRound, variation, rng);
+          if (!invalidQuestion(fallback)) best = fallback;
+        }
+      }
+      if (!best) {
+        best = normalizeQuestion(rawQuestion(lineId, safeIndex, arcRound, 99 + round, rng), lineId, safeIndex, arcRound, 99 + round, rng);
       }
       usedSignatures.add(best.signature);
       usedContent.add(best.contentSignature);
       usedLearning.add(best.learningSignature);
+      usedVisible.add(visibleKey(best));
+      learningUseCount.set(best.learningSignature, (learningUseCount.get(best.learningSignature) || 0) + 1);
+      previousLearning = best.learningSignature;
       questions.push(best);
     }
     return { seed, questions };

@@ -71,7 +71,17 @@ for (const lineId of core.LINE_ORDER) {
       const pack = core.makeStageQuestions(lineId, stageIndex, { seed: seed + stageIndex * 1009 });
       assert.equal(pack.questions.length, 8);
       assert.deepEqual(Array.from(pack.questions, question => question.arcRole), expectedArc, lineId + '/' + stageIndex + ': 8問アークが不正です');
-      assert.equal(new Set(pack.questions.map(question => question.learningSignature)).size, 8, lineId + '/' + stageIndex + ': 同じ学習内容が一回の中で重複しています');
+      // 数える教材のように学習内容が有限のステージでは8問すべてを別内容にできない。
+      // 「続けて同じ内容を出さない」「一回の中で3度は繰り返さない」を契約とする。
+      const learnings = pack.questions.map(question => question.learningSignature);
+      learnings.forEach((signature, index) => {
+        if (index === 0) return;
+        assert.notEqual(signature, learnings[index - 1], lineId + '/' + stageIndex + ': 同じ学習内容が続けて出ています');
+      });
+      const learningCounts = new Map();
+      learnings.forEach(signature => learningCounts.set(signature, (learningCounts.get(signature) || 0) + 1));
+      assert(Math.max(...learningCounts.values()) <= 2, lineId + '/' + stageIndex + ': 同じ学習内容が3回以上くり返されています');
+      assert(learningCounts.size >= 5, lineId + '/' + stageIndex + ': 一回の中の学習内容が5種類未満です');
       assert(pack.questions[4].story, lineId + '/' + stageIndex + ': 5問目に場面問題がありません');
       assert(pack.questions[7].checkpoint, lineId + '/' + stageIndex + ': 最終問が代表問題ではありません');
       const kinds = new Set(pack.questions.map(question => question.kind));
