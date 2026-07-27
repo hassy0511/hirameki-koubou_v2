@@ -973,7 +973,9 @@
   function actionHtml(question, line) {
     if (question.feedback) return feedbackHtml(question);
     if (question.kind === 'choice' || question.kind === 'route' || question.kind === 'sort') {
-      const stagedChoice = activeCourseId === 'g1' && session && session.mode !== 'timeAttack';
+      // 選んでから「けってい」で確定する文法は、学年で変えない。
+      // 学年をまたぐと、同じタップが確定になったり選択になったりして混乱する。
+      const stagedChoice = session && session.mode !== 'timeAttack';
       const buttons = '<div class="' + answerLayoutClass(question) + '">' + (question.options || []).map(function (option) {
         const value = String(optionValue(option));
         const selected = stagedChoice && String(question.input) === value;

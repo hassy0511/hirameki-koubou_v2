@@ -88,6 +88,33 @@
     return hashString(JSON.stringify(semantic));
   }
 
+  // 一度目の誤答で出すヒントと、二度目に見せる言い換えを必ず用意する。
+  function secondaryHint(question) {
+    const math = question.math || {};
+    const type = (question.visual || {}).type || '';
+    if (/clock/.test(type) || math.kind === 'time') return '長い針が1目もりで1分、1しゅうで60分だったね。';
+    if (/length|ruler|tape/.test(type)) return '0の目もりから数えているか、単位がそろっているかを確かめよう。';
+    if (/graph|table|tally/.test(type)) return '表とグラフの数が合っているか、種類ごとに指で数えよう。';
+    if (math.kind === 'add') return '位をそろえて、一の位から順に合わせよう。';
+    if (math.kind === 'subtract') return '一の位から引けるか、まず確かめよう。';
+    if (math.kind === 'multiply') return '一つ分がいくつで、それが何こ分あるかを、分けて数えよう。';
+    return '図と数を、ひとつずつ指でたしかめよう。';
+  }
+
+  // 式だけの解説は、何をどうしたらそうなったかの一文へ直す。
+  function enrichExplain(question) {
+    const explain = String(question.explain || '').trim();
+    const parsed = explain.match(/^([0-9]+)\s*([＋−×÷+\-])\s*([0-9]+)\s*＝\s*([0-9]+)。?$/);
+    if (!parsed) return explain;
+    const left = parsed[1];
+    const right = parsed[3];
+    const result = parsed[4];
+    if (parsed[2] === '＋' || parsed[2] === '+') return left + 'と' + right + 'を合わせると' + result + '。だから' + left + '＋' + right + '＝' + result + '。';
+    if (parsed[2] === '−' || parsed[2] === '-') return left + 'から' + right + 'へると' + result + '残る。だから' + left + '−' + right + '＝' + result + '。';
+    if (parsed[2] === '×') return left + 'が' + right + 'こ分で' + result + '。だから' + left + '×' + right + '＝' + result + '。';
+    return explain;
+  }
+
   function finalizeQuestion(data, rng) {
     const question = Object.assign({
       kind: 'choice',
@@ -111,6 +138,10 @@
       showHint: false
     }, data || {});
     if (!APP_KINDS.includes(question.kind)) throw new Error('Unsupported G2 question kind: ' + question.kind);
+    question.explain = enrichExplain(question);
+    question.hints = [question.hint, secondaryHint(question)]
+      .filter(function (value, index, list) { return value && list.indexOf(value) === index; });
+    if (question.hints.length < 2) question.hints.push('分かっているところから、ひとつずつ確かめよう。');
     if (question.options && question.options.length) {
       question.options = question.optionPolicy === 'fixed'
         ? question.options.slice()
@@ -139,11 +170,17 @@
     return finalizeQuestion(Object.assign({ kind: 'choice' }, config), rng);
   }
 
+  // 個数そのものを答えさせる問題では、操作説明にその個数を書かない。
+  function tapInstruction(correct, prompt) {
+    const statedInPrompt = new RegExp('(^|[^0-9])' + String(correct) + '([^0-9]|$)').test(String(prompt || ''));
+    return statedInPrompt ? String(correct) + 'こ えらんで「けってい」' : '必要な数だけ えらんで「けってい」';
+  }
+
   function tapQuestion(config, rng) {
     return finalizeQuestion(Object.assign({
       kind: 'tap',
       input: 0,
-      instruction: String(config.correct) + 'こ えらんで「けってい」'
+      instruction: tapInstruction(config.correct, config.prompt)
     }, config), rng);
   }
 
@@ -650,7 +687,7 @@
       }
       if (slot % 3 === 0) {
         const useM = pick([true, false], rng);
-        const object = useM ? pick(['教室のよこ', '廊下', 'なわとび']) : pick(['ノート', 'えんぴつ', 'けしゴム']);
+        const object = useM ? pick(['教室のよこ', '廊下', 'なわとび'], rng) : pick(['ノート', 'えんぴつ', 'けしゴム'], rng);
         return choiceQuestion({
           kind: 'sort',
           prompt: object + 'の長さを表すのに使いやすい単位は？',

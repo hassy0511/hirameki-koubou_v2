@@ -208,6 +208,34 @@
     }, data || {});
   }
 
+  // 一度目の誤答で出すヒントと、二度目に見せる言い換えを必ず用意する。
+  // 小1側と支援の段数をそろえ、学年で手厚さが変わらないようにする。
+  function secondaryHint(question) {
+    const math = question.math || {};
+    if (math.kind === 'add') return '位をそろえて、一の位から順に合わせよう。10こたまったら十の位へ送るよ。';
+    if (math.kind === 'subtract') return '一の位から引けるか、まず確かめよう。引けないときは十の位から10を両替してくるよ。';
+    if (math.kind === 'multiply') return '一つ分がいくつで、それが何こ分あるかを、分けて数えよう。';
+    if (math.kind === 'commutative') return 'かける数とかけられる数を入れかえても、答えは同じだったね。';
+    if (math.kind === 'strategy') return '先に10のまとまりを作ると、あとの計算が楽になるよ。';
+    if (math.kind === 'inverse' || math.kind === 'missing-addend' || math.kind === 'missing-subtrahend') {
+      return '分かっている数と、求めたい数を、テープ図の形で思いうかべよう。';
+    }
+    return '図と数を、ひとつずつ指でたしかめよう。';
+  }
+
+  // 「25＋23＝48。」だけでは、なぜそうなるかが残らない。
+  function enrichExplain(question) {
+    const explain = String(question.explain || '').trim();
+    if (explain && !/^[0-9]+\s*[＋−×÷+\-]\s*[0-9]+\s*＝\s*[0-9]+。?$/.test(explain)) return explain;
+    const parsed = explain.match(/^([0-9]+)\s*([＋−×÷+\-])\s*([0-9]+)\s*＝\s*([0-9]+)。?$/);
+    if (!parsed) return explain;
+    const [, left, sign, right, result] = parsed;
+    if (sign === '＋' || sign === '+') return left + 'と' + right + 'を合わせると' + result + '。位ごとに足すと' + left + '＋' + right + '＝' + result + '。';
+    if (sign === '−' || sign === '-') return left + 'から' + right + 'へると' + result + '残る。位ごとに引くと' + left + '−' + right + '＝' + result + '。';
+    if (sign === '×') return left + 'が' + right + 'こ分で' + result + '。だから' + left + '×' + right + '＝' + result + '。';
+    return explain;
+  }
+
   function finalizeQuestion(data, meta, rng) {
     const question = defaults(data);
     question.gradeId = GRADE_ID;
@@ -217,6 +245,10 @@
     question.stageIndex = meta.stageIndex;
     question.canonicalSkillId = meta.stage.canonicalSkillId || FALLBACK_STAGES[meta.lineId][meta.stageIndex][1];
     question.checkpoint = meta.stageIndex === 4 || meta.stageIndex === 10;
+    question.explain = enrichExplain(question);
+    question.hints = [question.hint, secondaryHint(question)]
+      .filter(function (value, index, list) { return value && list.indexOf(value) === index; });
+    if (question.hints.length < 2) question.hints.push('分かっているところから、ひとつずつ確かめよう。');
     if (question.options && question.options.length) {
       question.options = question.optionPolicy === 'fixed'
         ? question.options.slice()
@@ -280,11 +312,18 @@
     }, extra || {});
   }
 
+  // 個数そのものを答えさせる問題では、操作説明にその個数を書かない。
+  // 「1ケース分を選ぼう」の説明が「10こ えらんで」では、答えを先に見せてしまう。
+  function tapInstruction(correct, prompt) {
+    const statedInPrompt = new RegExp('(^|[^0-9])' + String(correct) + '([^0-9]|$)').test(String(prompt || ''));
+    return statedInPrompt ? String(correct) + 'こ えらんで「けってい」' : '必要な数だけ えらんで「けってい」';
+  }
+
   function tapQuestion(correct, total, prompt, visual, extra) {
     return Object.assign({
       kind: 'tap',
       prompt,
-      instruction: String(correct) + 'こ えらんで「けってい」',
+      instruction: tapInstruction(correct, prompt),
       correct,
       options: [],
       input: 0,
@@ -325,7 +364,9 @@
     const groups = rand(2, unit === 10 ? 8 : 9, rng);
     const total = unit * groups;
     const role = round % STAGE_ROUNDS;
-    if (role === 0) return tapQuestion(unit, Math.min(20, total), total + 'この部品を ' + unit + 'こずつにする。1ケース分を選ぼう。', { type: 'selector', total: Math.min(20, total) }, { hint: 'まず一つのケースに入る数だけ選ぼう。', explain: '1ケースは' + unit + 'こだね。' });
+    // 「10こずつにする」と書いてから「1ケース分を選ぼう」では、答えを問題文が先に言ってしまう。
+    // 分ける数(ケース数)だけを示し、1ケース分がいくつになるかを考えさせる。
+    if (role === 0) return tapQuestion(unit, Math.min(20, total), total + 'この部品を、同じ数ずつ' + groups + 'ケースに分ける。1ケース分を選ぼう。', { type: 'selector', total: Math.min(20, total) }, { hint: 'どのケースにも同じ数になるように、1こずつ配るつもりで選ぼう。', explain: total + 'こを' + groups + 'ケースに同じ数ずつ分けると、1ケースは' + unit + 'こだね。' });
     if (role === 1) return numericChoice(total, unit + 'こ入りのケースが' + groups + 'こ。全部で何こ？', { type: 'equal-groups', groups, perGroup: unit, total }, rng, { min: 2, max: 90, step: unit, instruction: 'まとまりを数えて えらぼう', explain: unit + 'こずつを' + groups + '回数えると' + total + 'こ。' });
     if (role === 2) return { kind: 'sort', prompt: total + 'こを いちばん少ないケース数で、同じ数ずつまとめるなら？', correct: '10こずつ', options: ['2こずつ', '5こずつ', '10こずつ'], visual: { type: 'sort', item: total + 'こ', bins: ['2こずつ', '5こずつ', '10こずつ'] }, hint: '一つのケースに多く入るほど、ケースは少なくなるよ。', explain: '10こずつにするとケース数がいちばん少ないね。' };
     if (role === 3) {
@@ -451,7 +492,9 @@
       return { kind: 'route', prompt: left + 'と' + right + '。最初に大小が決まるスキャン場所は？', correct: place, options: uniqueOptions(place, fourDigit ? ['千の位', '百の位', '十の位', '一の位'] : ['百の位', '十の位', '一の位', '下の位'], 2), visual, hint: '左の位から、違う数字を探そう。', explain: place + 'を見れば判断できるよ。' };
     }
     if (role === 4) return { kind: 'choice', prompt: '比較ゲートの説明で正しいものは？', correct: '大きい位から比べる', options: ['大きい位から比べる', '一の位だけ比べる', '数字の個数だけ見る'], visual, hint: '位の大きさには順番があるよ。', explain: '千・百・十・一のように大きい位から比べるよ。' };
-    if (role === 5) return { kind: 'choice', prompt: '東倉庫に' + left + 'こ、西倉庫に' + right + 'こある。多い倉庫の個数は？', correct: Math.max(left, right), options: numberOptions(Math.max(left, right), { min: fourDigit ? 1000 : 100, max: fourDigit ? 9999 : 999, step: 10 }, rng), visual, story: true, hint: '倉庫の数を大きい位から比べよう。', explain: Math.max(left, right) + 'この倉庫が多いね。' };
+    // 数を「こ」で数える場面に四けたを持ちこむと、工房の情景として成立しない。
+    // 大きい数の比較は、部品ではなく在庫表の数として読む場面にする。
+    if (role === 5) return { kind: 'choice', prompt: '在庫表に東倉庫' + left + '、西倉庫' + right + 'とある。多いほうの数は？', correct: Math.max(left, right), options: numberOptions(Math.max(left, right), { min: fourDigit ? 1000 : 100, max: fourDigit ? 9999 : 999, step: 10 }, rng), visual, story: true, hint: '表の数を大きい位から比べよう。', explain: '大きい位から比べると' + Math.max(left, right) + 'のほうが多いね。' };
     if (role === 6) return { kind: 'choice', prompt: left + ' □ ' + right, correct, options: relationOptions(), optionPolicy: 'fixed', optionLayout: 'relation', visual, bareCalculation: true, operation: false, hint: '左から違う位を探そう。', explain: left + correct + right + '。' };
     return { kind: 'route', prompt: '大きい数へ回路をつなごう。', correct: Math.max(left, right), options: uniqueOptions(Math.max(left, right), [Math.min(left, right)], 2), visual, hint: '位ごとに比べよう。', explain: '大きい数は' + Math.max(left, right) + '。' };
   }
