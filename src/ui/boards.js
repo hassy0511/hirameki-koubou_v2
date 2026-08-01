@@ -201,17 +201,17 @@ export function renderBoard(q) {
     case 'stick-figure':
       return frame('<div class="solid-wrap">' + stickSvg(b.figure) + '</div>');
     case 'compare-bars':
-      return frame('<div class="compare-stack">' + bars(b.left, 10, 'ひだり') + bars(b.right, 10, 'みぎ') + '</div>');
+      return frame('<div class="compare-stack">' + bars(b.left, 10, 'あ') + bars(b.right, 10, 'い') + '</div>');
     case 'tape-compare':
-      return frame('<div class="compare-stack tape">' + bars(b.left, 10, 'ひだり') + bars(b.right, 10, 'みぎ') + '</div><p class="board-note">テープに うつした ながさ</p>');
+      return frame('<div class="compare-stack tape">' + bars(b.left, 10, 'あ') + bars(b.right, 10, 'い') + '</div><p class="board-note">テープに うつした ながさ</p>');
     case 'block-ruler': {
       const blocks = b.items.map((_, i) => '<button type="button" class="ruler-block' + (sel && sel.has(i) ? ' selected' : '') + '" data-piece="' + i + '" aria-label="ブロック"></button>').join('');
       return frame('<div class="ruler-wrap"><div class="ruler-bar" style="width:' + (b.barUnits * 10) + '%"><span>' + esc(b.object || 'ぼう') + '</span></div><div class="ruler-blocks">' + blocks + '</div></div>');
     }
     case 'cups':
-      return frame('<div class="compare-stack">' + cupsRow(b.left, 'ひだり') + cupsRow(b.right, 'みぎ') + '</div><p class="board-note">おなじ カップの いくつぶん</p>');
+      return frame('<div class="compare-stack">' + cupsRow(b.left, 'あ') + cupsRow(b.right, 'い') + '</div><p class="board-note">おなじ カップの いくつぶん</p>');
     case 'area-grid':
-      return frame('<div class="area-pair">' + areaPatch(b.left, 'ひだり') + areaPatch(b.right, 'みぎ') + '</div>');
+      return frame('<div class="area-pair">' + areaPatch(b.left, 'あ') + areaPatch(b.right, 'い') + '</div>');
     case 'clock':
       return frame('<div class="clock-wrap">' + clockSvg(b.h, b.m) + '</div>');
     case 'clock-set': {

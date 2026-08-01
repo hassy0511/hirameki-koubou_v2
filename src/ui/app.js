@@ -20,9 +20,13 @@ let listLine = null; // { lineId, stageIndex, pack, at, firstTry, results, phase
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-    if (raw && raw.version === 1) return raw;
+    if (raw && raw.version === 1) {
+      if (!raw.flags) raw.flags = { intro: false, lines: {} };
+      if (!raw.flags.lines) raw.flags.lines = {};
+      return raw;
+    }
   } catch (err) { /* こわれた保存は作り直す */ }
-  return { version: 1, progress: {}, plays: 0 };
+  return { version: 1, progress: {}, plays: 0, flags: { intro: false, lines: {} } };
 }
 
 function save() {
@@ -54,6 +58,56 @@ function show(html) {
   root.innerHTML = html;
   root.scrollTop = 0;
   window.scrollTo(0, 0);
+}
+
+// ---------- ものがたりの導入 ----------
+// はじめて ひらいた ときに 3まいだけ。よみおわったら 二どと じゃまを しない。
+
+const INTRO_PAGES = [
+  { img: 'assets/workshop-hero-v1.jpg', alt: 'こうぼうの なか',
+    text: 'ここは 「ひらめき こうぼう」。まんなかの そうち ルミナが、まちの みんなの どうぐを つくって いるよ。' },
+  { img: null, alt: '',
+    text: 'ある あさ、ルミナが ピタッと とまって しまった。こうぼうの 6つの そうちが、ぜんぶ こしょう したんだ。' },
+  { img: 'assets/story-guides-v1.jpg', alt: 'トトと モクモ',
+    text: 'もんだいに こたえると、そうちは すこしずつ うごきだす。トトと モクモと いっしょに、こうぼうを なおそう！' }
+];
+
+let introAt = 0;
+
+function introScreen() {
+  session = null;
+  const p = INTRO_PAGES[introAt];
+  const last = introAt === INTRO_PAGES.length - 1;
+  const marks = INTRO_PAGES.map((_, i) => '<span class="qdot' + (i === introAt ? ' now' : i < introAt ? ' done' : '') + '"></span>').join('');
+  show(
+    '<main class="intro">' +
+    (p.img ? '<img class="intro-img" src="' + p.img + '" alt="' + esc(p.alt) + '">' : '<div class="intro-dark">・・・</div>') +
+    '<div class="intro-card"><p>' + esc(p.text) + '</p></div>' +
+    '<div class="qnav">' + marks + '</div>' +
+    '<button type="button" class="commit" data-intro-next>' + (last ? 'こうぼうへ いく' : 'つぎへ') + '</button>' +
+    '</main>'
+  );
+}
+
+// 各そうち(ライン)の はじめての 1まい。「なにが こわれて、なにを すれば なおるか」だけを いう。
+const LINE_INTROS = {
+  number: 'かずの けいじばんの あかりが きえて、かずが よめなく なった。かぞえて こたえて、あかりを もどそう。',
+  addition: 'あわせる そうちの うでが とまって いる。あわせる けいさんで、うでを うごかそう。',
+  subtraction: 'わける そうちの でぐちが つまって いる。とる・わける けいさんで、ながれを もどそう。',
+  measure: 'はかる だいの めもりが くるって いる。ならべて くらべて、めもりを なおそう。',
+  shape: 'かたちの つくえが ちらかって しまった。かたちを みわけて、もとに もどそう。',
+  solve: 'しらべる つくえの きろくが きえた。ならべて かぞえて、きろくを つくりなおそう。'
+};
+
+function lineIntroScreen(lineId) {
+  session = null;
+  const line = G1.lines[lineId];
+  show(
+    '<header class="bar line-' + lineId + '"><button type="button" class="back" data-home>← もどる</button><h1>' + esc(line.name) + '</h1><span class="bar-side">' + esc(line.device) + '</span></header>' +
+    '<main class="intro"><div class="intro-card"><p>' + esc(LINE_INTROS[lineId] || '') + '</p></div>' +
+    '<button type="button" class="commit" data-line-go="' + lineId + '">なおしに いく</button>' +
+    '</main>'
+  );
 }
 
 function homeScreen() {
@@ -311,7 +365,23 @@ function finishStage() {
 root.addEventListener('click', event => {
   const t = event.target.closest('button');
   if (!t) return;
-  if (t.dataset.line) { stageListScreen(t.dataset.line); return; }
+  if (t.hasAttribute('data-intro-next')) {
+    introAt += 1;
+    if (introAt >= INTRO_PAGES.length) { state.flags.intro = true; save(); homeScreen(); }
+    else introScreen();
+    return;
+  }
+  if (t.dataset.lineGo) {
+    state.flags.lines[t.dataset.lineGo] = true;
+    save();
+    stageListScreen(t.dataset.lineGo);
+    return;
+  }
+  if (t.dataset.line) {
+    if (!state.flags.lines[t.dataset.line]) lineIntroScreen(t.dataset.line);
+    else stageListScreen(t.dataset.line);
+    return;
+  }
   if (t.hasAttribute('data-home')) { homeScreen(); return; }
   if (t.hasAttribute('data-quit')) { stageListScreen(session.lineId); return; }
   if (t.hasAttribute('data-back-stages')) { stageListScreen(session.lineId); return; }
@@ -401,6 +471,8 @@ window.__hirameki = {
 const hash = location.hash.match(/^#dev\/(\w+)\/(\d+)(?:\/(\d+))?/);
 if (hash) {
   startStage(hash[1], Number(hash[2]), hash[3] ? Number(hash[3]) : 12345);
+} else if (!state.flags.intro) {
+  introScreen();
 } else {
   homeScreen();
 }

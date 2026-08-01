@@ -2,6 +2,7 @@
 //   node tests/browser-sweep.mjs [serverURL]
 // 前提: リポジトリ直下で python3 -m http.server などのローカルサーバが動いていること。
 // 検査: 全66ステージ×8問で 盤面が描かれる・consoleエラーが無い・正答で最後まで進める。
+// 画面幅は iPhone 相当の 390px。どの問題も 横に はみ出さないことを 毎問たしかめる。
 
 import { chromium } from 'playwright';
 
@@ -9,7 +10,7 @@ const BASE = process.argv[2] || 'http://127.0.0.1:8901';
 const EXEC = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
 const browser = await chromium.launch({ executablePath: EXEC });
-const page = await browser.newPage({ viewport: { width: 560, height: 900 } });
+const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const errors = [];
 page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE: ' + m.text()); });
@@ -30,17 +31,33 @@ for (const lineId of lineOrder) {
         const board = document.querySelector('.board');
         const prompt = document.querySelector('.prompt');
         const commit = document.querySelector('[data-commit]');
+        // 横はみ出し検査: ページ全体と、盤面の中身の両方
+        const pageOverflow = document.documentElement.scrollWidth - window.innerWidth;
+        let boardOverflow = 0;
+        if (board) {
+          boardOverflow = board.scrollWidth - board.clientWidth;
+          const boardRect = board.getBoundingClientRect();
+          for (const el of board.querySelectorAll('*')) {
+            const r = el.getBoundingClientRect();
+            if (r.width === 0) continue;
+            boardOverflow = Math.max(boardOverflow, Math.ceil(r.right - boardRect.right), Math.ceil(boardRect.left - r.left));
+          }
+        }
         return {
           kind: question.kind,
           hasBoard: Boolean(question.board),
           boardDrawn: Boolean(board && board.children.length && board.getBoundingClientRect().height > 8),
           promptDrawn: Boolean(prompt && prompt.textContent.trim().length > 3),
-          commitDrawn: Boolean(commit)
+          commitDrawn: Boolean(commit),
+          pageOverflow,
+          boardOverflow
         };
       });
       if (!info.promptDrawn) problems.push(lineId + '/' + si + ' q' + (q + 1) + ': 問題文が表示されていない');
       if (info.hasBoard && !info.boardDrawn) problems.push(lineId + '/' + si + ' q' + (q + 1) + ' [' + info.kind + ']: 盤面が表示されていない');
       if (!info.commitDrawn) problems.push(lineId + '/' + si + ' q' + (q + 1) + ': けっていボタンが無い');
+      if (info.pageOverflow > 1) problems.push(lineId + '/' + si + ' q' + (q + 1) + ' [' + info.kind + ']: 画面から横に ' + info.pageOverflow + 'px はみ出す');
+      if (info.boardOverflow > 2) problems.push(lineId + '/' + si + ' q' + (q + 1) + ' [' + info.kind + ']: 盤面の中身が ' + info.boardOverflow + 'px 切れている');
       questionsChecked += 1;
       await page.evaluate(() => window.__hirameki.autoAnswer()); // 正解を流し込み commit
       const good = await page.evaluate(() => Boolean(document.querySelector('.feedback.good')));

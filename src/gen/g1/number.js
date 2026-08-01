@@ -42,6 +42,8 @@ export const numberStages = {
 
   // ── どちらが おおい？: 1対1対応 ──
   num_compare(slot, rng) {
+    // 問いは いつも「おおいのは どっち？」。おなじ回も この問いのまま
+    // 「おなじ かず」を選ばせる(「どうなっている？」のような ぼやけた問いは使わない)。
     const left = ranged(rng, slot, [[2, 4], [3, 6], [4, 9], [6, 10]]);
     let right;
     const same = slot === 5 && rng() < 0.6;
@@ -51,25 +53,30 @@ export const numberStages = {
       if (right < 1) right = left + 1;
       if (right > 10) right = left - 1;
     }
-    const answer = left === right ? 'おなじ' : left > right ? 'ひだり' : 'みぎ';
+    const answer = left === right ? 'おなじ かず' : left > right ? 'うえ' : 'した';
     const story = slot === 4;
     const item = thing(rng);
-    const prompt = same
-      ? 'ひだりと みぎを くらべよう。どうなっている？'
-      : story
-        ? 'トトは ひだりの はこ、モクモは みぎの はこに ' + item.name + 'を いれた。おおいのは どっち？'
-        : pick(rng, ['まるが おおいのは どっち？', 'おおい ほうは どっち？']);
+    const prompt = story
+      ? 'トトは うえの だん、モクモは したの だんに ' + item.name + 'を ならべた。おおいのは どっち？'
+      : pick(rng, ['まるが おおいのは どっち？', 'ならべて くらべよう。おおいのは どっち？']);
     return Q({
       kind: 'choice',
       prompt,
       answer,
-      options: ['ひだり', 'おなじ', 'みぎ'],
-      board: { type: 'two-groups', left, right, icon: story ? item.icon : 'dot', countable: true },
-      hint1: 'ひだりと みぎを、ひとつずつ ゆびで あわせて いこう。',
-      hint2: 'あまった ほうが おおいよ。あまらなければ おなじ。',
+      options: ['うえ', 'おなじ かず', 'した'],
+      board: {
+        type: 'rows-compare',
+        rows: [
+          { label: 'うえ', count: left, icon: story ? item.icon : 'dot' },
+          { label: 'した', count: right, icon: story ? item.icon : 'dot' }
+        ],
+        countable: true
+      },
+      hint1: 'うえと したを、ひとつずつ ゆびで あわせて いこう。',
+      hint2: 'あまった ほうが おおいよ。あまらなければ おなじ かず。',
       explain: left === right
-        ? 'ひだりも みぎも ' + left + 'こで おなじだね。'
-        : 'ひだりは ' + left + 'こ、みぎは ' + right + 'こ。' + answer + 'が おおいね。',
+        ? 'うえも したも ' + left + 'こ。おなじ かずだね。'
+        : 'うえは ' + left + 'こ、したは ' + right + 'こ。' + (left > right ? 'うえ' : 'した') + 'が おおいね。',
       story,
       learningKey: 'cmp:' + left + ':' + right,
       math: { kind: 'compare', left, right }

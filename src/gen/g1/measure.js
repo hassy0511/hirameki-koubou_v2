@@ -22,29 +22,29 @@ function band0(slot) {
   return slot <= 1;
 }
 
+// 問いは いつも「〜のは どっち？」のまま、おなじ回は「おなじ ながさ」等を選ばせる。
+// くらべる ふたつは 盤面のラベルに合わせて「あ」「い」と呼ぶ。
 function compareQuestion(rng, slot, cfg) {
   const [left, right] = lengths(rng, slot);
   const askLess = slot % 3 === 2;
   const same = left === right;
-  const answer = same ? 'おなじ' : (askLess ? (left < right ? 'ひだり' : 'みぎ') : (left > right ? 'ひだり' : 'みぎ'));
+  const answer = same ? cfg.sameWord : (askLess ? (left < right ? 'あ' : 'い') : (left > right ? 'あ' : 'い'));
   const object = pick(rng, cfg.objects);
   const story = slot === 4;
-  const prompt = same
-    ? 'ふたつを くらべよう。どうなっている？'
-    : story
-      ? cfg.scene(object, askLess)
-      : 'ひだりと みぎの ' + object + '。' + (askLess ? cfg.askLess : cfg.askMore);
+  const prompt = story
+    ? cfg.scene(object, askLess)
+    : '「あ」と「い」の ' + object + '。' + (askLess ? cfg.askLess : cfg.askMore);
   return Q({
     kind: 'choice',
     prompt,
     answer,
-    options: ['ひだり', 'おなじ', 'みぎ'],
+    options: ['あ', cfg.sameWord, 'い'],
     board: { type: cfg.boardType, left, right, unitLabel: cfg.unitLabel },
     hint1: cfg.hint1,
     hint2: cfg.hint2,
     explain: same
-      ? 'どちらも ' + cfg.amount(left) + 'で おなじだね。'
-      : 'ひだりは ' + cfg.amount(left) + '、みぎは ' + cfg.amount(right) + '。' + answer + 'が ' + (askLess ? cfg.lessWord : cfg.moreWord) + 'ね。',
+      ? '「あ」も「い」も ' + cfg.amount(left) + '。' + cfg.sameWord + 'だね。'
+      : '「あ」は ' + cfg.amount(left) + '、「い」は ' + cfg.amount(right) + '。「' + answer + '」が ' + (askLess ? cfg.lessWord : cfg.moreWord) + 'ね。',
     story,
     learningKey: cfg.keyPrefix + ':' + left + ':' + right + ':' + (askLess ? 'l' : 'm'),
     math: { kind: 'compare', left, right }
@@ -64,8 +64,9 @@ export const measureStages = {
       amount: n => 'めもり ' + n + 'こぶん',
       hint1: 'ひだりの はしが そろっているかを まず みよう。',
       hint2: 'とびだしている ほうが ながいよ。',
-      scene: (object, less) => 'トトと モクモが ' + object + 'を もちよった。' + (less ? 'みじかいのは どっち？' : 'ながいのは どっち？'),
-      keyPrefix: 'len'
+      scene: (object, less) => 'トトが「あ」、モクモが「い」の ' + object + 'を もってきた。' + (less ? 'みじかいのは どっち？' : 'ながいのは どっち？'),
+      keyPrefix: 'len',
+      sameWord: 'おなじ ながさ'
     });
   },
 
@@ -81,8 +82,9 @@ export const measureStages = {
       amount: n => 'テープ ' + n + 'めもりぶん',
       hint1: 'うごかせない ものは、テープに うつして くらべるんだったね。',
       hint2: 'うつした テープの はしを そろえて みよう。',
-      scene: (object, less) => 'うごかせない ' + object + 'を テープに うつした。' + (less ? 'みじかいのは どっち？' : 'ながいのは どっち？'),
-      keyPrefix: 'tape'
+      scene: (object, less) => '「あ」と「い」の ' + object + 'を テープに うつした。' + (less ? 'みじかいのは どっち？' : 'ながいのは どっち？'),
+      keyPrefix: 'tape',
+      sameWord: 'おなじ ながさ'
     });
   },
 
@@ -150,8 +152,9 @@ export const measureStages = {
       amount: n => 'カップ ' + n + 'はいぶん',
       hint1: 'おなじ カップの いくつぶんかで くらべるよ。',
       hint2: 'カップの えを かぞえて みよう。',
-      scene: (object, less) => 'ふたつの ' + object + 'から カップに みずを うつした。' + (less ? 'すくないのは どっち？' : 'おおく はいるのは どっち？'),
-      keyPrefix: 'cap'
+      scene: (object, less) => '「あ」と「い」の ' + object + 'から カップに みずを うつした。' + (less ? 'すくないのは どっち？' : 'おおく はいるのは どっち？'),
+      keyPrefix: 'cap',
+      sameWord: 'おなじ かさ'
     });
   },
 
@@ -167,8 +170,9 @@ export const measureStages = {
       amount: n => 'マス ' + n + 'こぶん',
       hint1: 'おなじ おおきさの マスの かずで くらべよう。',
       hint2: 'マスを 1つずつ かぞえて みよう。',
-      scene: (object, less) => 'ふたつの ' + object + 'を マスの うえに おいた。' + (less ? 'せまいのは どっち？' : 'ひろいのは どっち？'),
-      keyPrefix: 'area'
+      scene: (object, less) => '「あ」と「い」の ' + object + 'を マスの うえに おいた。' + (less ? 'せまいのは どっち？' : 'ひろいのは どっち？'),
+      keyPrefix: 'area',
+      sameWord: 'おなじ ひろさ'
     });
   },
 

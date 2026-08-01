@@ -177,6 +177,24 @@ export function validatePack(pack, stage, label) {
     }
   }
 
+  // 数の答えの単調さ: 「2と3ばかり」のような回を禁じる。
+  // 位置答え(pick-one)と、答えの空間が意図して狭いステージは対象外。
+  const numericSeq = questions
+    .filter(q => q.kind !== 'pick-one' && /^\d+$/.test(String(q.answer)))
+    .map(q => String(q.answer));
+  if (!stage.smallAnswerSpace && !stage.represent && numericSeq.length >= 6) {
+    const tally = new Map();
+    numericSeq.forEach(a => tally.set(a, (tally.get(a) || 0) + 1));
+    for (const [a, n] of tally) {
+      if (n > 3) err('同じ答え「' + a + '」が' + n + '回ある(3回まで)');
+    }
+    if (new Set(numericSeq).size < 4) err('答えの種類が' + new Set(numericSeq).size + '種しかない(4種以上)');
+    for (let i = 0; i + 4 <= numericSeq.length; i += 1) {
+      const window = new Set(numericSeq.slice(i, i + 4));
+      if (window.size < 3) err('連続する4問の答えが' + [...window].join('と') + 'の くりかえしになっている');
+    }
+  }
+
   // 「答えの数が問題文に書いてある」作業課題は導入だけ。
   // (前作の「4こ とろう を8回」を禁じる規則。答えが文に無い操作課題は対象外)
   if (!stage.represent && !stage.assessment) {

@@ -39,6 +39,8 @@ export function makePack(lineId, stageIndex, seed) {
   const seenVisible = new Set();
   const keyCount = new Map();
   const answerCount = new Map();
+  const strictNumeric = !stage.smallAnswerSpace && !stage.represent;
+  const numericSeq = []; // pick-one 以外の数の答え(順番どおり)
   let prevKey = null;
   let prevAnswer = null;
   let prevAnswer2 = null;
@@ -54,6 +56,16 @@ export function makePack(lineId, stageIndex, seed) {
       if ((keyCount.get(candidate.learningKey) || 0) >= (stage.maxRepeat || 2)) continue;
       if (answer === prevAnswer && answer === prevAnswer2) continue;
       if (stage.balanceAnswers && (answerCount.get(answer) || 0) >= 4) continue;
+      // 数の答えの単調さを避ける(spec.js の規則と同じ)
+      if (strictNumeric && candidate.kind !== 'pick-one' && /^\d+$/.test(answer)) {
+        if ((answerCount.get(answer) || 0) >= 3) continue;
+        if (numericSeq.length >= 3) {
+          const window = new Set(numericSeq.slice(-3).concat(answer));
+          if (window.size < 3) continue;
+        }
+        const distinctAfter = new Set(numericSeq.concat(answer)).size;
+        if (distinctAfter + (7 - slot) < 4) continue; // 残り問数で4種に届かない選び方をしない
+      }
       chosen = candidate;
     }
     // 候補が尽きたら、ゆずれる条件からゆるめる。
@@ -70,6 +82,7 @@ export function makePack(lineId, stageIndex, seed) {
     seenVisible.add(JSON.stringify([chosen.prompt, chosen.answer, chosen.board]));
     keyCount.set(chosen.learningKey, (keyCount.get(chosen.learningKey) || 0) + 1);
     answerCount.set(answer, (answerCount.get(answer) || 0) + 1);
+    if (chosen.kind !== 'pick-one' && /^\d+$/.test(answer)) numericSeq.push(answer);
     prevAnswer2 = prevAnswer;
     prevAnswer = answer;
     prevKey = chosen.learningKey;
