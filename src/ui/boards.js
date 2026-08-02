@@ -263,8 +263,15 @@ export function renderBoard(q) {
       }
       return frame('<div class="pictograph make"><div class="graph-col"><div class="graph-stack">' + cells + '</div><span class="bar-label">' + esc(b.label) + '</span></div></div>');
     }
-    case 'story-strip':
-      return frame('<div class="story-strip"><div class="group">' + dots(b.a, b.icon) + '</div><span class="story-op">' + (b.add ? '→ ふえる' : '→ へる') + '</span><div class="group">' + dots(b.b, b.icon, b.add ? 'rows' : 'rows') + '</div></div>');
+    case 'story-strip': {
+      // 群には かならず名前と数を付ける(「あげた 1こ」)。裸の「→へる」の隣に
+      // 1こだけ置くと「1こに なる」と誤読されるため。へる側の群は うすく描く。
+      const verb = b.verb || (b.add ? 'ふえた' : 'へった');
+      const second = b.add
+        ? dots(b.b, b.icon)
+        : '<div class="dot-field arrange-rows">' + Array.from({ length: b.b }, () => dot(b.icon, 'removed')).join('') + '</div>';
+      return frame('<div class="story-strip"><div class="group tray"><small>はじめ ' + b.a + 'こ</small>' + dots(b.a, b.icon) + '</div><div class="group tray"><small>' + esc(verb) + ' ' + b.b + 'こ</small>' + second + '</div></div>');
+    }
     case 'picture-op': {
       const first = dots(b.a, 'dot');
       const second = b.add ? dots(b.b, 'dot') : '<div class="dot-field arrange-rows">' + Array.from({ length: b.b }, () => dot('dot', 'removed')).join('') + '</div>';

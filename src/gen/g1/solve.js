@@ -37,19 +37,19 @@ function storyNumbers(rng, slot, add) {
   return [a, b];
 }
 
+// 文と動詞をペアで返す。盤面は この動詞で「あげた 1こ」のように群に名前を付ける
+// (「→へる」の隣に1こだけ置くと「1こに なる」と誤読される、を防ぐ)。
 function tale(rng, item, who, add, a, b) {
-  if (add) {
-    return pick(rng, [
-      'はこに ' + item + 'が ' + a + 'こ。' + who + 'が ' + b + 'こ いれた。',
-      who + 'は ' + item + 'を ' + a + 'こ もっていた。' + b + 'こ もらった。',
-      'つくえに ' + item + 'が ' + a + 'こ。あとから ' + b + 'こ ふえた。'
-    ]);
-  }
-  return pick(rng, [
-    'はこに ' + item + 'が ' + a + 'こ。' + who + 'が ' + b + 'こ つかった。',
-    who + 'は ' + item + 'を ' + a + 'こ もっていた。' + b + 'こ あげた。',
-    'かごに ' + item + 'が ' + a + 'こ。' + b + 'こ とりだした。'
-  ]);
+  const forms = add ? [
+    { text: 'はこに ' + item + 'が ' + a + 'こ。' + who + 'が ' + b + 'こ いれた。', verb: 'いれた' },
+    { text: who + 'は ' + item + 'を ' + a + 'こ もっていた。' + b + 'こ もらった。', verb: 'もらった' },
+    { text: 'つくえに ' + item + 'が ' + a + 'こ。あとから ' + b + 'こ ふえた。', verb: 'ふえた' }
+  ] : [
+    { text: 'はこに ' + item + 'が ' + a + 'こ。' + who + 'が ' + b + 'こ つかった。', verb: 'つかった' },
+    { text: who + 'は ' + item + 'を ' + a + 'こ もっていた。' + b + 'こ あげた。', verb: 'あげた' },
+    { text: 'かごに ' + item + 'が ' + a + 'こ。' + b + 'こ とりだした。', verb: 'とりだした' }
+  ];
+  return pick(rng, forms);
 }
 
 export const solveStages = {
@@ -187,13 +187,14 @@ export const solveStages = {
     const [a, b] = storyNumbers(rng, slot, add);
     const item = thing(rng);
     const who = actor(rng);
+    const taleOf = tale(rng, item.name, who, add, a, b);
     const story = slot === 4;
     return Q({
       kind: 'choice',
-      prompt: tale(rng, item.name, who, add, a, b) + ' つかう けいさんは どっち？',
+      prompt: taleOf.text + ' つかう けいさんは どっち？',
       answer: add ? 'たしざん' : 'ひきざん',
       options: ['たしざん', 'ひきざん'],
-      board: { type: 'story-strip', a, b, add, icon: item.icon },
+      board: { type: 'story-strip', a, b, add, icon: item.icon, verb: taleOf.verb },
       hint1: add ? 'ふえたのかな、へったのかな。' : 'ふえたのかな、へったのかな。よく よもう。',
       hint2: add ? '「いれた」「もらった」「ふえた」は たしざんだよ。' : '「つかった」「あげた」「とりだした」は ひきざんだよ。',
       explain: add
@@ -211,6 +212,7 @@ export const solveStages = {
     const [a, b] = storyNumbers(rng, slot, add);
     const item = thing(rng);
     const who = actor(rng);
+    const taleOf = tale(rng, item.name, who, add, a, b);
     const story = slot === 4;
     const correct = a + (add ? '＋' : '−') + b;
     const optionSet = new Set([correct, a + (add ? '−' : '＋') + b]);
@@ -223,10 +225,10 @@ export const solveStages = {
     if (!options.includes(correct)) options[0] = correct;
     return Q({
       kind: 'choice',
-      prompt: tale(rng, item.name, who, add, a, b) + ' あう しきは どれ？',
+      prompt: taleOf.text + ' あう しきは どれ？',
       answer: correct,
       options,
-      board: { type: 'story-strip', a, b, add, icon: item.icon },
+      board: { type: 'story-strip', a, b, add, icon: item.icon, verb: taleOf.verb },
       hint1: 'はじめの かずと、' + (add ? 'ふえた' : 'へった') + ' かずを さがそう。',
       hint2: add ? 'ふえる ときは ＋の しきに なるよ。' : 'へる ときは −の しきに なるよ。',
       explain: 'はじめ ' + a + 'こ、' + (add ? b + 'こ ふえた' : b + 'こ へった') + '。だから しきは ' + correct + ' だよ。',
@@ -243,12 +245,13 @@ export const solveStages = {
     const answer = add ? a + b : a - b;
     const item = thing(rng);
     const who = actor(rng);
+    const taleOf = tale(rng, item.name, who, add, a, b);
     const story = slot === 4;
     return Q({
       kind: 'keypad',
-      prompt: tale(rng, item.name, who, add, a, b) + (add ? ' ぜんぶで いくつ？' : ' のこりは いくつ？'),
+      prompt: taleOf.text + (add ? ' ぜんぶで いくつ？' : ' のこりは いくつ？'),
       answer,
-      board: { type: 'story-strip', a, b, add, icon: item.icon },
+      board: { type: 'story-strip', a, b, add, icon: item.icon, verb: taleOf.verb },
       hint1: add ? 'ふえる おはなしだから たしざんだよ。' : 'へる おはなしだから ひきざんだよ。',
       hint2: 'しきに すると ' + a + (add ? '＋' : '−') + b + ' だね。',
       explain: (add ? a + 'こに ' + b + 'こ ふえて ' : a + 'こから ' + b + 'こ へって ') + answer + 'こに なるよ。',
