@@ -3,7 +3,14 @@
 
 import { Q, numberOptions, ranged, randInt, pick } from '../util.js';
 
-const LONG_OBJECTS = ['えんぴつ', 'リボン', 'ぼう', 'テープ', 'ひも'];
+// 名前と見た目はかならず対にする。呼び方だけ変えて絵が同じ、を禁じるため
+// key が styles.css の .obj-* と .ruler-bar.obj-* に対応する。
+const LONG_OBJECTS = [
+  { name: 'えんぴつ', key: 'pencil' },
+  { name: 'リボン', key: 'ribbon' },
+  { name: 'ぼう', key: 'stick' },
+  { name: 'ひも', key: 'string' }
+];
 
 // 2本の長さ。おなじ回は twist(slot5-6)にだけ混ぜる。
 function lengths(rng, slot) {
@@ -30,21 +37,30 @@ function compareQuestion(rng, slot, cfg) {
   const same = left === right;
   const answer = same ? cfg.sameWord : (askLess ? (left < right ? 'あ' : 'い') : (left > right ? 'あ' : 'い'));
   const object = pick(rng, cfg.objects);
+  const objectName = typeof object === 'string' ? object : object.name;
+  const objectKey = typeof object === 'string' ? null : object.key;
   const story = slot === 4;
+  const longSide = left > right ? 'あ' : 'い';
   const prompt = story
-    ? cfg.scene(object, askLess)
-    : '「あ」と「い」の ' + object + '。' + (askLess ? cfg.askLess : cfg.askMore);
+    ? cfg.scene(objectName, askLess)
+    : '「あ」と「い」の ' + objectName + '。' + (askLess ? cfg.askLess : cfg.askMore);
+  // 直接比較(continuous)は めもりの無い実物の形で見せるので、説明も「とびだし」で言う
+  const explain = same
+    ? (cfg.continuous
+      ? 'はしを そろえると ぴったり おなじ。' + cfg.sameWord + 'だね。'
+      : '「あ」も「い」も ' + cfg.amount(left) + '。' + cfg.sameWord + 'だね。')
+    : (cfg.continuous
+      ? '「' + longSide + '」が とびだして いるね。' + (askLess ? 'みじかいのは 「' + answer + '」だよ。' : '「' + answer + '」が ながいよ。')
+      : '「あ」は ' + cfg.amount(left) + '、「い」は ' + cfg.amount(right) + '。「' + answer + '」が ' + (askLess ? cfg.lessWord : cfg.moreWord) + 'ね。');
   return Q({
     kind: 'choice',
     prompt,
     answer,
     options: ['あ', cfg.sameWord, 'い'],
-    board: { type: cfg.boardType, left, right, unitLabel: cfg.unitLabel },
+    board: { type: cfg.boardType, left, right, unitLabel: cfg.unitLabel, objectKey },
     hint1: cfg.hint1,
     hint2: cfg.hint2,
-    explain: same
-      ? '「あ」も「い」も ' + cfg.amount(left) + '。' + cfg.sameWord + 'だね。'
-      : '「あ」は ' + cfg.amount(left) + '、「い」は ' + cfg.amount(right) + '。「' + answer + '」が ' + (askLess ? cfg.lessWord : cfg.moreWord) + 'ね。',
+    explain,
     story,
     learningKey: cfg.keyPrefix + ':' + left + ':' + right + ':' + (askLess ? 'l' : 'm'),
     math: { kind: 'compare', left, right }
@@ -66,7 +82,8 @@ export const measureStages = {
       hint2: 'とびだしている ほうが ながいよ。',
       scene: (object, less) => 'トトが「あ」、モクモが「い」の ' + object + 'を もってきた。' + (less ? 'みじかいのは どっち？' : 'ながいのは どっち？'),
       keyPrefix: 'len',
-      sameWord: 'おなじ ながさ'
+      sameWord: 'おなじ ながさ',
+      continuous: true
     });
   },
 
@@ -84,7 +101,8 @@ export const measureStages = {
       hint2: 'うつした テープの はしを そろえて みよう。',
       scene: (object, less) => '「あ」と「い」の ' + object + 'を テープに うつした。' + (less ? 'みじかいのは どっち？' : 'ながいのは どっち？'),
       keyPrefix: 'tape',
-      sameWord: 'おなじ ながさ'
+      sameWord: 'おなじ ながさ',
+      continuous: true
     });
   },
 
@@ -93,7 +111,8 @@ export const measureStages = {
     const blocks = 10;
     const barUnits = ranged(rng, slot, [[3, 4], [4, 6], [5, 8], [7, 9]]);
     const story = slot === 4;
-    const object = pick(rng, ['ぼう', 'リボン', 'テープ']);
+    const objectPair = pick(rng, [{ name: 'ぼう', key: 'stick' }, { name: 'リボン', key: 'ribbon' }, { name: 'テープ', key: 'tape' }]);
+    const object = objectPair.name;
     return Q({
       kind: 'pick-one',
       prompt: story
@@ -102,10 +121,10 @@ export const measureStages = {
       instruction: 'その ブロックを タップして 「けってい」',
       answer: barUnits - 1,
       task: 'produce',
-      board: { type: 'block-ruler', items: Array.from({ length: blocks }, () => 'block'), barUnits, object },
-      hint1: 'ぼうの はじまりと ブロックの はじまりが そろっているよ。',
-      hint2: 'ひだりから 1、2、と かぞえて、ぼうの おわる ところを みつけよう。',
-      explain: 'ぼうは ブロック ' + barUnits + 'こぶんの ながさだね。',
+      board: { type: 'block-ruler', items: Array.from({ length: blocks }, () => 'block'), barUnits, object, objectKey: objectPair.key },
+      hint1: object + 'の はじまりと ブロックの はじまりが そろっているよ。',
+      hint2: 'ひだりから 1、2、と かぞえて、' + object + 'の おわる ところを みつけよう。',
+      explain: object + 'は ブロック ' + barUnits + 'こぶんの ながさだね。',
       story,
       learningKey: 'unit:' + barUnits,
       math: { kind: 'unit', n: barUnits }

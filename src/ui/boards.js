@@ -116,6 +116,11 @@ function bars(units, max, label) {
   return '<div class="bar-row"><span class="bar-label">' + esc(label) + '</span><span class="bar-track">' + cells + '</span></div>';
 }
 
+// 実物の形の連続した棒。問題文の呼び名(えんぴつ・リボン…)と見た目を一致させる
+function objRow(units, label, key) {
+  return '<div class="bar-row"><span class="bar-label">' + esc(label) + '</span><span class="obj-lane"><span class="obj-bar obj-' + esc(key || 'tape') + '" style="width:' + (units * 10) + '%"></span></span></div>';
+}
+
 function cupsRow(n, label) {
   let cups = '';
   for (let i = 0; i < n; i += 1) cups += '<span class="cup"></span>';
@@ -201,12 +206,12 @@ export function renderBoard(q) {
     case 'stick-figure':
       return frame('<div class="solid-wrap">' + stickSvg(b.figure) + '</div>');
     case 'compare-bars':
-      return frame('<div class="compare-stack">' + bars(b.left, 10, 'あ') + bars(b.right, 10, 'い') + '</div>');
+      return frame('<div class="compare-stack">' + objRow(b.left, 'あ', b.objectKey) + objRow(b.right, 'い', b.objectKey) + '</div>');
     case 'tape-compare':
-      return frame('<div class="compare-stack tape">' + bars(b.left, 10, 'あ') + bars(b.right, 10, 'い') + '</div><p class="board-note">テープに うつした ながさ</p>');
+      return frame('<div class="compare-stack">' + objRow(b.left, 'あ', 'tape') + objRow(b.right, 'い', 'tape') + '</div><p class="board-note">テープに うつした ながさ</p>');
     case 'block-ruler': {
       const blocks = b.items.map((_, i) => '<button type="button" class="ruler-block' + (sel && sel.has(i) ? ' selected' : '') + '" data-piece="' + i + '" aria-label="ブロック"></button>').join('');
-      return frame('<div class="ruler-wrap"><div class="ruler-bar" style="width:' + (b.barUnits * 10) + '%"><span>' + esc(b.object || 'ぼう') + '</span></div><div class="ruler-blocks">' + blocks + '</div></div>');
+      return frame('<div class="ruler-wrap"><div class="ruler-bar obj-' + esc(b.objectKey || 'tape') + '" style="width:' + (b.barUnits * 10) + '%"><span>' + esc(b.object || 'ぼう') + '</span></div><div class="ruler-blocks">' + blocks + '</div></div>');
     }
     case 'cups':
       return frame('<div class="compare-stack">' + cupsRow(b.left, 'あ') + cupsRow(b.right, 'い') + '</div><p class="board-note">おなじ カップの いくつぶん</p>');

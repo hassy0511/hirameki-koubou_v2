@@ -368,3 +368,17 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .intro-card { background: var(--paper); border-radius: 14px; padding: 18px 16px; width: 100%; max-width: 460px; box-shadow: 0 3px 0 rgba(0,0,0,.18); }
 .intro-card p { font-size: 1.05rem; line-height: 1.9; color: #2a2a24; }
 .intro .commit { min-width: 220px; }
+
+/* ---------- 実物の形の棒(呼び名と見た目を一致させる) ---------- */
+.obj-lane { display: block; width: 100%; }
+.obj-bar { display: block; height: 20px; }
+.obj-pencil { background: linear-gradient(180deg, #ffd75e, #eab63e); clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%); }
+.obj-ribbon { background: linear-gradient(180deg, #ff9db4, #e0607f); clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 50%, 100% 100%, 0 100%); }
+.obj-stick { background: linear-gradient(180deg, #c89a62, #8a5a2c); border-radius: 9px; }
+.obj-string { height: 7px; background: #7a5230; border-radius: 4px; margin: 7px 0; }
+.obj-tape { background: linear-gradient(180deg, #bcd8f2, #7fb1e8); border: 1.5px dashed #4a7fd0; height: 18px; }
+
+/* ブロックはかりの帯も対象の見た目に合わせる */
+.ruler-bar.obj-ribbon { background: linear-gradient(180deg, #ff9db4, #e0607f); border-radius: 6px 2px 2px 6px; }
+.ruler-bar.obj-stick { background: linear-gradient(180deg, #c89a62, #8a5a2c); }
+.ruler-bar.obj-tape { background: linear-gradient(180deg, #9cc4ec, #6ba3e0); }
