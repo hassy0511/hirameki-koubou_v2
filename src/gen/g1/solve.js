@@ -4,8 +4,8 @@ import { Q, numberOptions, ranged, randInt, pick, shuffle, thing, actor } from '
 
 const CARD_SETS = [
   { label: 'たべもの', items: ['りんご', 'パン', 'みかん', 'おにぎり', 'バナナ', 'いちご'] },
-  { label: 'どうぶつ', items: ['うさぎ', 'ねこ', 'いぬ', 'ことり', 'かめ', 'りす'] },
-  { label: 'どうぐ', items: ['はさみ', 'えんぴつ', 'のり', 'じょうぎ', 'ふで', 'クレヨン'] }
+  { label: 'どうぶつ', items: ['うさぎ', 'ねこ', 'いぬ', 'ことり', 'きんぎょ', 'りす'] },
+  { label: 'どうぐ', items: ['はさみ', 'えんぴつ', 'けしゴム', 'じょうぎ', 'ふで', 'クレヨン'] }
 ];
 
 const FRUIT = [
