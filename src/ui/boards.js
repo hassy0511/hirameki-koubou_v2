@@ -6,8 +6,25 @@ function esc(value) {
   return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
+// 学習対象の絵。色ちがいの丸で「りんご」と言い張らないための、それと分かる形。
+const PIECE_SVG = {
+  apple: '<svg viewBox="0 0 32 32"><path d="M16 9 q-1.5 -4.5 2.5 -7" fill="none" stroke="#7a4a21" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="21.8" cy="6.8" rx="4.2" ry="2.5" fill="#5da53f" transform="rotate(22 21.8 6.8)"/><path d="M16 10.5 C8.5 10.5 5.5 17 8.5 23 C10.5 27 13 29 16 29 C19 29 21.5 27 23.5 23 C26.5 17 23.5 10.5 16 10.5 Z" fill="#d94436"/><ellipse cx="12" cy="15.5" rx="2.4" ry="3.2" fill="#f28b7d" opacity=".7"/></svg>',
+  orange: '<svg viewBox="0 0 32 32"><circle cx="16" cy="18" r="11.5" fill="#f59a23"/><circle cx="12" cy="14" r="2.6" fill="#ffd28c" opacity=".8"/><ellipse cx="20" cy="6.4" rx="3.8" ry="2.2" fill="#5da53f" transform="rotate(18 20 6.4)"/><circle cx="16" cy="7.4" r="1.3" fill="#8a5a2c"/></svg>',
+  grape: '<svg viewBox="0 0 32 32"><path d="M16 8 q0 -4 3 -6" fill="none" stroke="#7a4a21" stroke-width="2.2" stroke-linecap="round"/><circle cx="10.5" cy="13" r="4.4" fill="#8a4fc0"/><circle cx="21.5" cy="13" r="4.4" fill="#8a4fc0"/><circle cx="16" cy="11" r="4.4" fill="#9d68d0"/><circle cx="12.5" cy="19.5" r="4.4" fill="#8a4fc0"/><circle cx="19.5" cy="19.5" r="4.4" fill="#9d68d0"/><circle cx="16" cy="25.5" r="4.4" fill="#8a4fc0"/></svg>',
+  strawberry: '<svg viewBox="0 0 32 32"><path d="M9 8 L16 11 L23 8 L20.5 13 L11.5 13 Z" fill="#4d9e3c"/><path d="M16 29 C8 24 6.5 15 16 11.5 C25.5 15 24 24 16 29 Z" fill="#e0405f"/><circle cx="13" cy="18" r="1" fill="#ffe08a"/><circle cx="19" cy="18" r="1" fill="#ffe08a"/><circle cx="16" cy="23" r="1" fill="#ffe08a"/></svg>',
+  acorn: '<svg viewBox="0 0 32 32"><path d="M16 4 q1 -2 3 -2" stroke="#5a3a1a" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M7 12 Q16 5 25 12 L25 14 L7 14 Z" fill="#6d4a26"/><path d="M9 14 L23 14 Q22 26 16 29 Q10 26 9 14 Z" fill="#b57f3f"/></svg>',
+  button: '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.5" fill="#e8ecf4" stroke="#8a93ad" stroke-width="2"/><circle cx="16" cy="16" r="8.6" fill="none" stroke="#b9c1d4" stroke-width="1.2"/><circle cx="13" cy="13.4" r="1.5" fill="#7d879f"/><circle cx="19" cy="13.4" r="1.5" fill="#7d879f"/><circle cx="13" cy="18.6" r="1.5" fill="#7d879f"/><circle cx="19" cy="18.6" r="1.5" fill="#7d879f"/></svg>',
+  block: '<svg viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="24" rx="4" fill="#e8a33d"/><path d="M4 13 L28 13 L28 8 Q28 4 24 4 L8 4 Q4 4 4 8 Z" fill="#f5c26b"/></svg>',
+  bead: '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.5" fill="#5c8fd6"/><path d="M9 12 q4 -6 12 -4" stroke="#cfe4ff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".9"/></svg>'
+};
+
+function pieceInner(icon) {
+  return PIECE_SVG[icon] || '';
+}
+
 function dot(icon, extra) {
-  return '<span class="piece icon-' + esc(icon || 'dot') + (extra ? ' ' + extra : '') + '"></span>';
+  const svg = pieceInner(icon);
+  return '<span class="piece' + (svg ? ' svg-icon' : '') + ' icon-' + esc(icon || 'dot') + (extra ? ' ' + extra : '') + '">' + svg + '</span>';
 }
 
 function dots(n, icon, arrange) {
@@ -20,7 +37,8 @@ function tapPieces(n, icon, selected, mode) {
   const items = [];
   for (let i = 0; i < n; i += 1) {
     const on = selected && selected.has(i);
-    items.push('<button type="button" class="piece tap icon-' + esc(icon || 'dot') + (on ? (mode === 'remove' ? ' removed' : ' selected') : '') + '" data-piece="' + i + '" aria-pressed="' + Boolean(on) + '"></button>');
+    const svg = pieceInner(icon);
+    items.push('<button type="button" class="piece tap' + (svg ? ' svg-icon' : '') + ' icon-' + esc(icon || 'dot') + (on ? (mode === 'remove' ? ' removed' : ' selected') : '') + '" data-piece="' + i + '" aria-pressed="' + Boolean(on) + '">' + svg + '</button>');
   }
   return items.join('');
 }
@@ -230,14 +248,18 @@ export function renderBoard(q) {
       const max = Math.max(...b.columns.map(c => c.count), 5);
       return frame('<div class="pictograph">' + b.columns.map(c => {
         let cells = '';
-        for (let i = 0; i < max; i += 1) cells += '<span class="graph-cell' + (i < c.count ? ' on icon-' + esc(c.icon) : '') + '"></span>';
+        for (let i = 0; i < max; i += 1) {
+          const svg = i < c.count ? pieceInner(c.icon) : '';
+          cells += '<span class="graph-cell' + (i < c.count ? ' on' : '') + (svg ? ' pic' : ' icon-' + esc(c.icon)) + '">' + svg + '</span>';
+        }
         return '<div class="graph-col"><div class="graph-stack">' + cells + '</div><span class="bar-label">' + esc(c.label) + '</span></div>';
       }).join('') + '</div>');
     }
     case 'graph-make': {
       let cells = '';
       for (let i = 0; i < b.supply; i += 1) {
-        cells += '<button type="button" class="graph-cell tap' + (sel && sel.has(i) ? ' selected icon-' + esc(b.icon) : '') + '" data-piece="' + i + '"></button>';
+        const svg = sel && sel.has(i) ? pieceInner(b.icon) : '';
+        cells += '<button type="button" class="graph-cell tap' + (sel && sel.has(i) ? ' selected' : '') + (svg ? ' pic' : '') + '" data-piece="' + i + '">' + svg + '</button>';
       }
       return frame('<div class="pictograph make"><div class="graph-col"><div class="graph-stack">' + cells + '</div><span class="bar-label">' + esc(b.label) + '</span></div></div>');
     }

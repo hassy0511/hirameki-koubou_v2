@@ -382,3 +382,10 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .ruler-bar.obj-ribbon { background: linear-gradient(180deg, #ff9db4, #e0607f); border-radius: 6px 2px 2px 6px; }
 .ruler-bar.obj-stick { background: linear-gradient(180deg, #c89a62, #8a5a2c); }
 .ruler-bar.obj-tape { background: linear-gradient(180deg, #9cc4ec, #6ba3e0); }
+
+/* ---------- 学習対象の絵(SVGの実物アイコン) ---------- */
+.piece.svg-icon { background: none; box-shadow: none; border-radius: 0; }
+.piece.svg-icon svg, .graph-cell svg { width: 100%; height: 100%; display: block; }
+.graph-cell.on.pic { background: none; }
+.graph-cell.tap.selected.pic { background: #fff; }
+.fruit-row { grid-template-columns: 56px 1fr; }
