@@ -395,3 +395,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 /* おはなしの盤面: 名前つきのトレイ */
 .story-strip .group { background: #fbf7ec; border: 1.5px dashed #d8ccae; border-radius: 10px; padding: 8px; }
 .story-strip .group small { display: block; text-align: center; color: #6b6455; font-size: .72rem; margin-bottom: 4px; }
+
+/* 管理者モードの表示 */
+.admin-note { background: #3a2a4a; color: #ffd9a0; border-radius: 10px; padding: 8px 12px; font-size: .85rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.admin-note .soft.small { font-size: .8rem; padding: 4px 10px; }

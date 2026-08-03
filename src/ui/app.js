@@ -42,6 +42,7 @@ function progressOf(stageId) {
 }
 
 function isUnlocked(lineId, stageIndex) {
+  if (state.flags.admin) return true; // 管理者モード: 全ステージ解放
   if (stageIndex <= 0) return true;
   const prev = G1.lines[lineId].stages[stageIndex - 1];
   const p = progressOf(prev.id);
@@ -127,7 +128,9 @@ function homeScreen() {
     '<div class="hero-text"><h1>ひらめき こうぼう</h1>' +
     '<p>ルミナの こうぼうを なおしながら、さんすうを たんけんしよう。</p></div>' +
     '</header>' +
-    '<main class="home"><h2>どの そうちを うごかす？</h2>' +
+    '<main class="home">' +
+    (state.flags.admin ? '<p class="admin-note">かんりしゃモード(全ステージ かいほう) <button type="button" class="soft small" data-admin-off>もどす</button></p>' : '') +
+    '<h2>どの そうちを うごかす？</h2>' +
     '<div class="line-grid">' + lines + '</div>' +
     '<p class="small-note">きろくは この たんまつの なかにだけ のこるよ。</p>' +
     '</main>'
@@ -382,6 +385,7 @@ root.addEventListener('click', event => {
     else stageListScreen(t.dataset.line);
     return;
   }
+  if (t.hasAttribute('data-admin-off')) { state.flags.admin = false; save(); homeScreen(); return; }
   if (t.hasAttribute('data-home')) { homeScreen(); return; }
   if (t.hasAttribute('data-quit')) { stageListScreen(session.lineId); return; }
   if (t.hasAttribute('data-back-stages')) { stageListScreen(session.lineId); return; }
@@ -467,6 +471,14 @@ window.__hirameki = {
 };
 
 // ---------- 起動 ----------
+
+// #admin を付けて開くと 管理者モード(全ステージ解放)。ホームの「もどす」で解除
+if (location.hash === '#admin') {
+  state.flags.admin = true;
+  state.flags.intro = true; // 管理者は導入を飛ばす
+  save();
+  history.replaceState(null, '', location.pathname + location.search);
+}
 
 const hash = location.hash.match(/^#dev\/(\w+)\/(\d+)(?:\/(\d+))?/);
 if (hash) {
