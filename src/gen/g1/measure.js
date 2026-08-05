@@ -57,7 +57,7 @@ function compareQuestion(rng, slot, cfg) {
     prompt,
     answer,
     options: ['あ', cfg.sameWord, 'い'],
-    board: { type: cfg.boardType, left, right, unitLabel: cfg.unitLabel, objectKey },
+    board: { type: cfg.boardType, left, right, unitLabel: cfg.unitLabel, object: objectName, objectKey },
     hint1: cfg.hint1,
     hint2: cfg.hint2,
     explain,
@@ -162,7 +162,11 @@ export const measureStages = {
   // ── どちらが おおく はいる？(カップのいくつぶん) ──
   mea_capacity(slot, rng) {
     return compareQuestion(rng, slot, {
-      objects: ['すいとう', 'ペットボトル', 'やかん'],
+      objects: [
+        { name: 'すいとう', key: 'water-bottle' },
+        { name: 'ペットボトル', key: 'pet-bottle' },
+        { name: 'やかん', key: 'kettle' }
+      ],
       boardType: 'cups',
       askMore: 'おおく はいるのは どっち？',
       askLess: 'すくないのは どっち？',

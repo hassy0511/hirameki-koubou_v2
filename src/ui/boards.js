@@ -36,6 +36,9 @@ const PIECE_SVG = {
   'pencil-cup': '<svg viewBox="0 0 32 32"><path d="M10 17 L7 4 L11 3 L14 17 M17 17 L20 2 L24 4 L21 18" fill="#efbd45" stroke="#6f513b" stroke-width="1.4"/><path d="M5 13 L27 13 L24 29 L8 29 Z" fill="#6f9fc0" stroke="#526071" stroke-width="1.6"/><path d="M9 17 h14" stroke="#a9d2e4" stroke-width="1.5"/></svg>',
   'tennis-ball': '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="#c5d947" stroke="#657238" stroke-width="1.6"/><path d="M7 6 Q17 11 26 7 M6 25 Q15 20 26 25" fill="none" stroke="#f7f0d2" stroke-width="2"/></svg>',
   marble: '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="#5b9fd2" stroke="#526071" stroke-width="1.6"/><path d="M8 21 Q15 8 24 13 Q17 17 13 27" fill="#8fd1d5" opacity=".8"/><ellipse cx="11" cy="10" rx="3" ry="4" fill="#e7f7ff" opacity=".75"/> </svg>',
+  'water-bottle': '<svg viewBox="0 0 32 32"><path d="M12 3 L20 3 L20 8 Q24 11 24 17 L23 29 L9 29 L8 17 Q8 11 12 8 Z" fill="#66a8b5" stroke="#40566b" stroke-width="1.5"/><path d="M11 4 h10 v4 H11 Z" fill="#e8a33d" stroke="#75562c" stroke-width="1.2"/><path d="M11 14 Q16 11 21 14 L21 24 Q16 26 11 24 Z" fill="#9bc8c7"/><path d="M13 16 q3 -2 6 0" fill="none" stroke="#e8f2e9" stroke-width="1.4"/></svg>',
+  'pet-bottle': '<svg viewBox="0 0 32 32"><path d="M13 3 H19 L19 8 Q23 11 22 16 L21 29 H11 L10 16 Q9 11 13 8 Z" fill="#d7ecf2" stroke="#526071" stroke-width="1.5"/><path d="M12 4 h8 v4 h-8 Z" fill="#5c8fd6"/><path d="M11 16 Q16 14 22 16 L21 23 Q16 25 11 23 Z" fill="#79bca8"/><path d="M12 11 q4 2 8 0 M12 26 q4 -2 8 0" fill="none" stroke="#fff" stroke-width="1.2" opacity=".85"/></svg>',
+  kettle: '<svg viewBox="0 0 32 32"><path d="M8 13 Q7 7 16 6 Q25 7 24 15 L23 26 Q16 30 9 26 Z" fill="#e6a34b" stroke="#6f513b" stroke-width="1.6"/><path d="M10 9 Q16 2 22 9" fill="none" stroke="#40566b" stroke-width="2.4" stroke-linecap="round"/><path d="M23 13 L30 16 L24 20 Z" fill="#e6a34b" stroke="#6f513b" stroke-width="1.5"/><path d="M11 14 q5 -4 10 0" fill="none" stroke="#f5cf85" stroke-width="1.8"/><circle cx="16" cy="7" r="2" fill="#40566b"/></svg>',
   acorn: '<svg viewBox="0 0 32 32"><path d="M16 4 q1 -2 3 -2" stroke="#5a3a1a" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M7 12 Q16 5 25 12 L25 14 L7 14 Z" fill="#6d4a26"/><path d="M9 14 L23 14 Q22 26 16 29 Q10 26 9 14 Z" fill="#b57f3f"/></svg>',
   button: '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.5" fill="#e8ecf4" stroke="#8a93ad" stroke-width="2"/><circle cx="16" cy="16" r="8.6" fill="none" stroke="#b9c1d4" stroke-width="1.2"/><circle cx="13" cy="13.4" r="1.5" fill="#7d879f"/><circle cx="19" cy="13.4" r="1.5" fill="#7d879f"/><circle cx="13" cy="18.6" r="1.5" fill="#7d879f"/><circle cx="19" cy="18.6" r="1.5" fill="#7d879f"/></svg>',
   block: '<svg viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="24" rx="4" fill="#e8a33d"/><path d="M4 13 L28 13 L28 8 Q28 4 24 4 L8 4 Q4 4 4 8 Z" fill="#f5c26b"/></svg>',
@@ -163,10 +166,10 @@ function objRow(units, label, key) {
   return '<div class="bar-row"><span class="bar-label">' + esc(label) + '</span><span class="obj-lane"><span class="obj-bar obj-' + esc(key || 'tape') + '" style="width:' + (units * 10) + '%"></span></span></div>';
 }
 
-function cupsRow(n, label) {
+function cupsRow(n, label, object, objectKey) {
   let cups = '';
   for (let i = 0; i < n; i += 1) cups += '<span class="cup"></span>';
-  return '<div class="cup-row"><span class="bar-label">' + esc(label) + '</span><span class="cup-track">' + cups + '</span></div>';
+  return '<div class="cup-row"><span class="capacity-label"><b>' + esc(label) + '</b><span class="capacity-object" role="img" aria-label="' + esc(object) + '">' + pieceInner(objectKey) + '</span></span><span class="cup-track">' + cups + '</span></div>';
 }
 
 function areaPatch(n, label) {
@@ -256,7 +259,7 @@ export function renderBoard(q) {
       return frame('<div class="ruler-wrap"><div class="ruler-bar obj-' + esc(b.objectKey || 'tape') + '" style="width:' + (b.barUnits * 10) + '%"><span>' + esc(b.object || 'ぼう') + '</span></div><div class="ruler-blocks">' + blocks + '</div></div>');
     }
     case 'cups':
-      return frame('<div class="compare-stack">' + cupsRow(b.left, 'あ') + cupsRow(b.right, 'い') + '</div><p class="board-note">おなじ カップの いくつぶん</p>');
+      return frame('<div class="compare-stack">' + cupsRow(b.left, 'あ', b.object, b.objectKey) + cupsRow(b.right, 'い', b.object, b.objectKey) + '</div><p class="board-note">おなじ カップの いくつぶん</p>');
     case 'area-grid':
       return frame('<div class="area-pair">' + areaPatch(b.left, 'あ') + areaPatch(b.right, 'い') + '</div>');
     case 'clock':
