@@ -246,8 +246,13 @@ export function renderBoard(q) {
     }
     case 'object-card':
       return frame('<div class="object-card"><span class="object-card-picture" role="img" aria-label="' + esc(b.label) + '">' + pieceInner(b.icon) + '</span><span class="object-card-label">' + esc(b.label) + '</span></div>');
-    case 'solid':
-      return frame('<div class="solid-wrap">' + (SOLID_SVG[b.solid] || '') + (b.label ? '<p class="board-note">' + esc(b.label) + '</p>' : '') + '</div>');
+    case 'solid': {
+      const objectSvg = b.icon ? pieceInner(b.icon) : '';
+      const art = objectSvg
+        ? '<span class="solid-object">' + objectSvg + '</span>'
+        : (SOLID_SVG[b.solid] || '');
+      return frame('<div class="solid-wrap">' + art + (b.label ? '<p class="board-note">' + esc(b.label) + '</p>' : '') + '</div>');
+    }
     case 'stamp-mark':
       return frame('<div class="solid-wrap stamp">' + (FACE_SVG[b.face] || '') + '<p class="board-note">かみに ついた あと</p></div>');
     case 'grid-copy':

@@ -315,11 +315,11 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .bar-unit.on { background: linear-gradient(180deg, #7cc7a1, #2f9e6f); }
 .tape .bar-unit.on { background: linear-gradient(180deg, #ffd27c, #e8a33d); }
 
-.ruler-wrap { width: 100%; padding: 8px 5px 5px; background: linear-gradient(180deg, #fffdf7, #f6ecd6); border-radius: 9px; }
+.ruler-wrap { width: 100%; padding: 10px 5px 5px; background: linear-gradient(180deg, #fffdf7, #f6ecd6); border-radius: 9px; }
 .ruler-bar {
   height: 28px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   background: linear-gradient(180deg, #9bd1b5, #2f9e6f 72%);
   border: 1.5px solid #316b55;
   border-radius: 6px 12px 12px 6px;
@@ -331,6 +331,17 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   font-weight: 700;
   text-shadow: 0 1px 0 rgba(28,42,74,.45);
   box-shadow: inset 0 3px 0 rgba(255,255,255,.25), inset 0 -3px 0 rgba(28,42,74,.16);
+}
+/* 右はしは答えの根拠なので、濃い縁と縦線ではっきり示す */
+.ruler-bar::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  right: -1.5px;
+  width: 3px;
+  background: #1c2a4a;
+  border-radius: 2px;
 }
 .ruler-bar span { position: relative; z-index: 1; }
 .ruler-bar::before {
@@ -412,7 +423,11 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
   font-size: 1.15rem;
   font-weight: 700;
   box-shadow: 0 3px 0 rgba(0,0,0,.2);
+  /* 「さいころの かたち」のような長い語が 2列のときに折り返さないようにする */
+  text-wrap: balance;
+  word-break: keep-all;
 }
+.option-grid.count-4 .answer-option { font-size: clamp(.92rem, 4vw, 1.15rem); padding: 14px 6px; }
 .answer-option.selected { background: var(--navy); color: var(--paper); }
 .answer-option:active { transform: translateY(2px); box-shadow: none; }
 
@@ -600,3 +615,7 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 /* 管理者モードの表示 */
 .admin-note { background: #3a2a4a; color: #ffd9a0; border-radius: 10px; padding: 8px 12px; font-size: .85rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .admin-note .soft.small { font-size: .8rem; padding: 4px 10px; }
+
+/* うごきかたを問う盤面は 物そのものの絵を大きめに出す */
+.solid-object { display: block; width: 96px; height: 96px; margin: 0 auto; }
+.solid-object svg { width: 100%; height: 100%; display: block; }

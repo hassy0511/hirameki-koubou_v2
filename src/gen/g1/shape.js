@@ -28,15 +28,16 @@ const OBJECTS = [
   { name: 'オレンジ', solid: 'ball', icon: 'orange' }
 ];
 
+// うごきかたを問うので、盤面には その物そのものを描く(ビーだまは ガラスの玉)。
 const ROLL_CASES = [
-  { name: 'ジュースの かん', answer: 'ころがる し つめる', solid: 'tube' },
-  { name: 'ラップの しん', answer: 'ころがる し つめる', solid: 'tube' },
-  { name: 'テニスの たま', answer: 'ころがる', solid: 'ball' },
-  { name: 'ビーだま', answer: 'ころがる', solid: 'ball' },
-  { name: 'つみき', answer: 'つめる', solid: 'cube' },
-  { name: 'ティッシュの ケース', answer: 'つめる', solid: 'box' },
-  { name: 'ずかん', answer: 'つめる', solid: 'box' },
-  { name: 'オレンジ', answer: 'ころがる', solid: 'ball' }
+  { name: 'ジュースの かん', answer: 'ころがる し つめる', solid: 'tube', icon: 'juice-can' },
+  { name: 'ラップの しん', answer: 'ころがる し つめる', solid: 'tube', icon: 'wrap-core' },
+  { name: 'テニスの たま', answer: 'ころがる', solid: 'ball', icon: 'tennis-ball' },
+  { name: 'ビーだま', answer: 'ころがる', solid: 'ball', icon: 'marble' },
+  { name: 'つみき', answer: 'つめる', solid: 'cube', icon: 'block' },
+  { name: 'ティッシュの ケース', answer: 'つめる', solid: 'box', icon: 'tissue-case' },
+  { name: 'ずかん', answer: 'つめる', solid: 'box', icon: 'picture-book' },
+  { name: 'オレンジ', answer: 'ころがる', solid: 'ball', icon: 'orange' }
 ];
 
 // ぼうの かたち。segments が そのまま画面に描かれるので、本数が絵とずれることはない。
@@ -88,7 +89,7 @@ export const shapeStages = {
         : pick(rng, ['「' + item.name + '」は、ころがる？ つめる？ それとも どちらも？', '「' + item.name + '」の うごきかたは どれ？ ころがる？ つめる？ どちらも？']),
       answer: item.answer,
       options: ['ころがる', 'つめる', 'ころがる し つめる'],
-      board: { type: 'solid', solid: item.solid, label: item.name },
+      board: { type: 'solid', solid: item.solid, label: item.name, icon: item.icon },
       hint1: 'まるい めんが あると ころがるよ。',
       hint2: 'たいらな めんが あると、かさねて つめるよ。',
       explain: '「' + item.name + '」は ' + item.answer + '。めんの かたちで きまるんだね。',
