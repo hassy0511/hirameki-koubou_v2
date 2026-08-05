@@ -67,7 +67,7 @@ function show(html) {
 const INTRO_PAGES = [
   { img: 'assets/workshop-hero-v1.jpg', alt: 'こうぼうの なか',
     text: 'ここは 「ひらめき こうぼう」。まんなかの そうち ルミナが、まちの みんなの どうぐを つくって いるよ。' },
-  { img: null, alt: '',
+  { img: 'assets/workshop-dark-v1.jpg', alt: 'ルミナが とまった こうぼう',
     text: 'ある あさ、ルミナが ピタッと とまって しまった。こうぼうの 6つの そうちが、ぜんぶ こしょう したんだ。' },
   { img: 'assets/story-guides-v1.jpg', alt: 'トトと モクモ',
     text: 'もんだいに こたえると、そうちは すこしずつ うごきだす。トトと モクモと いっしょに、こうぼうを なおそう！' }
