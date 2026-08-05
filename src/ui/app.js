@@ -360,9 +360,15 @@ function finishStage() {
   const nextIndex = session.stageIndex + 1;
   const line = G1.lines[session.lineId];
   const hasNext = nextIndex < line.stages.length;
+  const repairLabel = line.device + 'が うごきだす ところ';
   show(
     '<main class="result line-' + session.lineId + '">' +
     '<h1>' + esc(stage.name) + ' クリア！</h1>' +
+    '<section class="repair-scene" aria-label="' + esc(repairLabel) + '">' +
+    '<span class="repair-glow"></span><span class="repair-light light-left"></span><span class="repair-light light-right"></span>' +
+    '<span class="repair-device" role="img" aria-label="' + esc(line.device) + '">' + iconSvg(LINE_ICONS[session.lineId]) + '</span>' +
+    '<button type="button" class="repair-skip" data-skip-repair>えんしゅつを とばす</button>' +
+    '</section>' +
     '<p class="stars">' + '★'.repeat(stars) + '☆'.repeat(3 - stars) + '</p>' +
     '<p>8もんちゅう ' + session.firstTry + 'もん、いちどで せいかい。</p>' +
     '<p class="repair">' + esc(line.device) + 'が うごきだした。こうぼうが すこし あかるく なったよ。</p>' +
@@ -378,6 +384,11 @@ function finishStage() {
 root.addEventListener('click', event => {
   const t = event.target.closest('button');
   if (!t) return;
+  if (t.hasAttribute('data-skip-repair')) {
+    const scene = t.closest('.repair-scene');
+    if (scene) scene.classList.add('is-skipped');
+    return;
+  }
   if (t.hasAttribute('data-intro-next')) {
     introAt += 1;
     if (introAt >= INTRO_PAGES.length) { state.flags.intro = true; save(); homeScreen(); }

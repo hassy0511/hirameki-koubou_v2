@@ -396,6 +396,88 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .result-actions { display: grid; gap: 10px; margin-top: 8px; }
 .line-complete { font-weight: 700; color: var(--line-number); }
 
+.repair-scene {
+  width: min(310px, calc(100vw - 40px));
+  height: 148px;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: 3px solid #b5824c;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #0d172b, #172541 72%, #2d2b2b);
+  box-shadow: inset 0 -20px 30px rgba(0,0,0,.24), 0 5px 0 rgba(0,0,0,.22);
+  animation: workshop-wake 2.4s ease-out both;
+}
+.repair-scene::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34px;
+  background: repeating-linear-gradient(90deg, #8a5b37 0 36px, #a56e40 36px 38px);
+  border-top: 2px solid #c5945b;
+}
+.repair-glow {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,218,111,.55), rgba(255,196,71,.14) 46%, transparent 70%);
+  opacity: 0;
+  animation: repair-glow 2.4s ease-out both;
+}
+.repair-device { width: 112px; height: 92px; z-index: 2; transform-origin: 50% 80%; animation: device-wake 2.4s ease-out both; }
+.repair-device svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 5px 2px rgba(0,0,0,.28)); }
+.repair-light {
+  position: absolute;
+  top: 18px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  z-index: 3;
+  background: #ffe18a;
+  box-shadow: 0 0 16px 5px rgba(255,211,92,.65);
+  opacity: 0;
+  animation: repair-light-on 2.4s ease-out both;
+}
+.repair-light.light-left { left: 26px; }
+.repair-light.light-right { right: 26px; animation-delay: .12s; }
+.repair-skip {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  z-index: 5;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(20,32,58,.82);
+  color: var(--paper);
+  font-size: .7rem;
+  animation: repair-skip-hide 0s 2.4s forwards;
+}
+.repair-scene.is-skipped { animation: none; background: linear-gradient(180deg, #294467, #416d78 72%, #5c4637); }
+.repair-scene.is-skipped .repair-glow { animation: none; opacity: 1; }
+.repair-scene.is-skipped .repair-device { animation: none; transform: none; }
+.repair-scene.is-skipped .repair-light { animation: none; opacity: 1; }
+.repair-scene.is-skipped .repair-skip { display: none; }
+
+@keyframes workshop-wake {
+  0%, 28% { background: linear-gradient(180deg, #0d172b, #172541 72%, #2d2b2b); }
+  100% { background: linear-gradient(180deg, #294467, #416d78 72%, #5c4637); }
+}
+@keyframes repair-glow { 0%, 35% { opacity: 0; transform: scale(.45); } 70% { opacity: 1; transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes device-wake { 0%, 30% { transform: translateY(8px); filter: brightness(.55); } 48% { transform: translateY(3px) rotate(-2deg); } 60% { transform: translateY(0) rotate(2deg); } 72%, 100% { transform: none; filter: brightness(1.08); } }
+@keyframes repair-light-on { 0%, 54% { opacity: 0; transform: scale(.4); } 68% { opacity: 1; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes repair-skip-hide { to { visibility: hidden; pointer-events: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .repair-scene, .repair-glow, .repair-device, .repair-light, .repair-skip { animation: none; }
+  .repair-scene { background: linear-gradient(180deg, #294467, #416d78 72%, #5c4637); }
+  .repair-glow, .repair-light { opacity: 1; }
+  .repair-skip { display: none; }
+}
+
 @media (min-width: 620px) {
   .option-grid.count-3 { grid-template-columns: 1fr 1fr 1fr; }
 }
