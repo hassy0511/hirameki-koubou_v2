@@ -133,11 +133,13 @@ function gridPanel(size, marked, interactive, selected, dotStyle) {
   return '<div class="mini-grid size-' + size + '">' + cells + '</div>';
 }
 
+const SOLID_DEFS = '<defs><linearGradient id="solid-face" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe4b3"/><stop offset=".58" stop-color="#e8ad65"/><stop offset="1" stop-color="#c98545"/></linearGradient><linearGradient id="solid-top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0cb"/><stop offset="1" stop-color="#e8bd7d"/></linearGradient><linearGradient id="solid-side" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d79452"/><stop offset="1" stop-color="#a96437"/></linearGradient><radialGradient id="solid-ball" cx="34%" cy="28%" r="72%"><stop offset="0" stop-color="#fff0c7"/><stop offset=".48" stop-color="#e6ae69"/><stop offset="1" stop-color="#bd7440"/></radialGradient></defs>';
+
 const SOLID_SVG = {
-  box: '<svg viewBox="0 0 120 100"><rect x="14" y="34" width="70" height="50" rx="4" class="s-face"/><path d="M14 34 L38 14 L108 14 L84 34 Z" class="s-top"/><path d="M84 34 L108 14 L108 64 L84 84 Z" class="s-side"/></svg>',
-  cube: '<svg viewBox="0 0 120 100"><rect x="20" y="30" width="54" height="54" rx="4" class="s-face"/><path d="M20 30 L44 12 L98 12 L74 30 Z" class="s-top"/><path d="M74 30 L98 12 L98 66 L74 84 Z" class="s-side"/></svg>',
-  tube: '<svg viewBox="0 0 120 100"><rect x="30" y="22" width="60" height="60" class="s-face"/><ellipse cx="60" cy="22" rx="30" ry="10" class="s-top"/><ellipse cx="60" cy="82" rx="30" ry="10" class="s-side"/></svg>',
-  ball: '<svg viewBox="0 0 120 100"><circle cx="60" cy="52" r="36" class="s-face"/><ellipse cx="60" cy="52" rx="36" ry="12" class="s-line"/></svg>'
+  box: '<svg viewBox="0 0 120 100">' + SOLID_DEFS + '<rect x="14" y="34" width="70" height="50" rx="4" class="s-face"/><path d="M14 34 L38 14 L108 14 L84 34 Z" class="s-top"/><path d="M84 34 L108 14 L108 64 L84 84 Z" class="s-side"/><path d="M21 42 H75 M21 50 H68" class="s-highlight"/><path d="M43 21 H95 M91 39 V70" class="s-grain"/><circle cx="31" cy="69" r="2.5" class="s-knot"/></svg>',
+  cube: '<svg viewBox="0 0 120 100">' + SOLID_DEFS + '<rect x="20" y="30" width="54" height="54" rx="4" class="s-face"/><path d="M20 30 L44 12 L98 12 L74 30 Z" class="s-top"/><path d="M74 30 L98 12 L98 66 L74 84 Z" class="s-side"/><path d="M27 38 H67 M27 46 H60" class="s-highlight"/><path d="M47 19 H88 M82 36 V73" class="s-grain"/><circle cx="54" cy="67" r="2.4" class="s-knot"/></svg>',
+  tube: '<svg viewBox="0 0 120 100">' + SOLID_DEFS + '<path d="M30 22 H90 V82 H30 Z" class="s-face"/><ellipse cx="60" cy="22" rx="30" ry="10" class="s-top"/><path d="M30 82 A30 10 0 0 0 90 82 A30 10 0 0 1 30 82 Z" class="s-side"/><path d="M39 30 V71" class="s-highlight"/><path d="M78 31 V73 M47 52 H70" class="s-grain"/><ellipse cx="60" cy="22" rx="23" ry="5.5" class="s-rim"/></svg>',
+  ball: '<svg viewBox="0 0 120 100">' + SOLID_DEFS + '<circle cx="60" cy="52" r="36" class="s-face s-ball"/><ellipse cx="60" cy="52" rx="36" ry="12" class="s-line"/><path d="M38 35 Q48 23 62 23" class="s-highlight ball-shine"/><path d="M35 61 Q56 71 82 61" class="s-grain"/><circle cx="73" cy="42" r="2.8" class="s-knot"/></svg>'
 };
 
 const FACE_SVG = {

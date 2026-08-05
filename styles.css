@@ -251,11 +251,17 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .object-card-picture svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 1px rgba(28,42,74,.18)); }
 .object-card-label { text-align: center; line-height: 1.45; }
 
-.solid-wrap svg { width: 130px; height: auto; }
-.s-face { fill: #ffd9a8; stroke: #b5824c; stroke-width: 2; }
-.s-top { fill: #ffe9c8; stroke: #b5824c; stroke-width: 2; }
-.s-side { fill: #eab876; stroke: #b5824c; stroke-width: 2; }
-.s-line { fill: none; stroke: #b5824c; stroke-width: 1.5; stroke-dasharray: 4 4; }
+.solid-wrap svg { width: 148px; height: auto; filter: drop-shadow(0 5px 2px rgba(28,42,74,.2)); }
+.s-face { fill: url(#solid-face); stroke: #795437; stroke-width: 2.4; stroke-linejoin: round; }
+.s-face.s-ball { fill: url(#solid-ball); }
+.s-top { fill: url(#solid-top); stroke: #795437; stroke-width: 2.4; stroke-linejoin: round; }
+.s-side { fill: url(#solid-side); stroke: #795437; stroke-width: 2.4; stroke-linejoin: round; }
+.s-line { fill: none; stroke: #9b663f; stroke-width: 1.6; stroke-dasharray: 4 4; }
+.s-highlight { fill: none; stroke: #fff2cf; stroke-width: 2.8; stroke-linecap: round; opacity: .7; }
+.s-highlight.ball-shine { stroke-width: 4; }
+.s-grain { fill: none; stroke: #9b663f; stroke-width: 1.5; stroke-linecap: round; opacity: .45; }
+.s-knot { fill: none; stroke: #9b663f; stroke-width: 1.4; opacity: .5; }
+.s-rim { fill: none; stroke: #fff0c8; stroke-width: 1.8; opacity: .65; }
 .mark { fill: #5c8fd6; opacity: .8; }
 .stamp .mark { fill: var(--accent); }
 
