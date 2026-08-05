@@ -8,7 +8,7 @@
 import { G1, makePack } from '../gen/index.js';
 import { validatePack } from '../engine/spec.js';
 import { stageAt } from '../curriculum/g1.js';
-import { renderBoard } from './boards.js';
+import { iconSvg, renderBoard } from './boards.js';
 
 const STORE_KEY = 'hirameki-v2';
 const root = document.getElementById('app');
@@ -67,7 +67,7 @@ function show(html) {
 const INTRO_PAGES = [
   { img: 'assets/workshop-hero-v1.jpg', alt: 'こうぼうの なか',
     text: 'ここは 「ひらめき こうぼう」。まんなかの そうち ルミナが、まちの みんなの どうぐを つくって いるよ。' },
-  { img: null, alt: '',
+  { img: 'assets/workshop-dark-v1.jpg', alt: 'ルミナが とまった こうぼう',
     text: 'ある あさ、ルミナが ピタッと とまって しまった。こうぼうの 6つの そうちが、ぜんぶ こしょう したんだ。' },
   { img: 'assets/story-guides-v1.jpg', alt: 'トトと モクモ',
     text: 'もんだいに こたえると、そうちは すこしずつ うごきだす。トトと モクモと いっしょに、こうぼうを なおそう！' }
@@ -100,6 +100,15 @@ const LINE_INTROS = {
   solve: 'しらべる つくえの きろくが きえた。ならべて かぞえて、きろくを つくりなおそう。'
 };
 
+const LINE_ICONS = {
+  number: 'device-number',
+  addition: 'device-addition',
+  subtraction: 'device-subtraction',
+  measure: 'device-measure',
+  shape: 'device-shape',
+  solve: 'device-solve'
+};
+
 function lineIntroScreen(lineId) {
   session = null;
   const line = G1.lines[lineId];
@@ -117,6 +126,7 @@ function homeScreen() {
     const line = G1.lines[lineId];
     const done = clearedCount(lineId);
     return '<button type="button" class="line-card line-' + lineId + '" data-line="' + lineId + '">' +
+      '<span class="line-icon" role="img" aria-label="' + esc(line.device) + '">' + iconSvg(LINE_ICONS[lineId]) + '</span>' +
       '<span class="line-name">' + esc(line.name) + '</span>' +
       '<span class="line-device">' + esc(line.device) + '</span>' +
       '<span class="line-progress">' + done + ' / ' + line.stages.length + '</span>' +
@@ -149,7 +159,7 @@ function stageListScreen(lineId) {
       '<span class="stage-no">' + (i + 1) + '</span>' +
       '<span class="stage-name">' + esc(stage.name) + '</span>' +
       '<span class="stage-action">' + esc(stage.action) + '</span>' +
-      '<span class="stage-stars">' + (unlocked ? stars : '🔒') + '</span>' +
+      '<span class="stage-stars">' + (unlocked ? stars : '<span class="lock-icon" role="img" aria-label="ロック"></span>') + '</span>' +
       '</button>';
   }).join('');
   show(
@@ -350,9 +360,15 @@ function finishStage() {
   const nextIndex = session.stageIndex + 1;
   const line = G1.lines[session.lineId];
   const hasNext = nextIndex < line.stages.length;
+  const repairLabel = line.device + 'が うごきだす ところ';
   show(
     '<main class="result line-' + session.lineId + '">' +
     '<h1>' + esc(stage.name) + ' クリア！</h1>' +
+    '<section class="repair-scene" aria-label="' + esc(repairLabel) + '">' +
+    '<span class="repair-glow"></span><span class="repair-light light-left"></span><span class="repair-light light-right"></span>' +
+    '<span class="repair-device" role="img" aria-label="' + esc(line.device) + '">' + iconSvg(LINE_ICONS[session.lineId]) + '</span>' +
+    '<button type="button" class="repair-skip" data-skip-repair>えんしゅつを とばす</button>' +
+    '</section>' +
     '<p class="stars">' + '★'.repeat(stars) + '☆'.repeat(3 - stars) + '</p>' +
     '<p>8もんちゅう ' + session.firstTry + 'もん、いちどで せいかい。</p>' +
     '<p class="repair">' + esc(line.device) + 'が うごきだした。こうぼうが すこし あかるく なったよ。</p>' +
@@ -368,6 +384,11 @@ function finishStage() {
 root.addEventListener('click', event => {
   const t = event.target.closest('button');
   if (!t) return;
+  if (t.hasAttribute('data-skip-repair')) {
+    const scene = t.closest('.repair-scene');
+    if (scene) scene.classList.add('is-skipped');
+    return;
+  }
   if (t.hasAttribute('data-intro-next')) {
     introAt += 1;
     if (introAt >= INTRO_PAGES.length) { state.flags.intro = true; save(); homeScreen(); }

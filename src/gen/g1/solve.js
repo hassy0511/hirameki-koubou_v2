@@ -3,9 +3,21 @@
 import { Q, numberOptions, ranged, randInt, pick, shuffle, thing, actor } from '../util.js';
 
 const CARD_SETS = [
-  { label: 'たべもの', items: ['りんご', 'パン', 'みかん', 'おにぎり', 'バナナ', 'いちご'] },
-  { label: 'どうぶつ', items: ['うさぎ', 'ねこ', 'いぬ', 'ことり', 'きんぎょ', 'りす'] },
-  { label: 'どうぐ', items: ['はさみ', 'えんぴつ', 'けしゴム', 'じょうぎ', 'ふで', 'クレヨン'] }
+  { label: 'たべもの', items: [
+    { name: 'りんご', icon: 'apple' }, { name: 'パン', icon: 'bread' },
+    { name: 'みかん', icon: 'orange' }, { name: 'おにぎり', icon: 'rice-ball' },
+    { name: 'バナナ', icon: 'banana' }, { name: 'いちご', icon: 'strawberry' }
+  ] },
+  { label: 'どうぶつ', items: [
+    { name: 'うさぎ', icon: 'rabbit' }, { name: 'ねこ', icon: 'cat' },
+    { name: 'いぬ', icon: 'dog' }, { name: 'ことり', icon: 'bird' },
+    { name: 'きんぎょ', icon: 'goldfish' }, { name: 'りす', icon: 'squirrel' }
+  ] },
+  { label: 'どうぐ', items: [
+    { name: 'はさみ', icon: 'scissors' }, { name: 'えんぴつ', icon: 'pencil' },
+    { name: 'けしゴム', icon: 'eraser' }, { name: 'じょうぎ', icon: 'ruler' },
+    { name: 'ふで', icon: 'brush' }, { name: 'クレヨン', icon: 'crayon' }
+  ] }
 ];
 
 const FRUIT = [
@@ -61,16 +73,16 @@ export const solveStages = {
     return Q({
       kind: 'choice',
       prompt: story
-        ? 'カードの かたづけ。「' + item + '」の カードは どの なかまの はこに いれる？'
-        : '「' + item + '」は どの なかま？',
+        ? 'カードの かたづけ。「' + item.name + '」の カードは どの なかまの はこに いれる？'
+        : '「' + item.name + '」は どの なかま？',
       answer: set.label,
       options: CARD_SETS.map(s => s.label),
-      board: { type: 'object-card', label: item },
+      board: { type: 'object-card', label: item.name, icon: item.icon },
       hint1: 'たべられるかな。いきものかな。つかう ものかな。',
       hint2: 'おなじ なかまの ものを おもいうかべよう。',
-      explain: '「' + item + '」は ' + set.label + 'の なかまだね。',
+      explain: '「' + item.name + '」は ' + set.label + 'の なかまだね。',
       story,
-      learningKey: 'sort:' + item,
+      learningKey: 'sort:' + item.name,
       math: null
     });
   },
