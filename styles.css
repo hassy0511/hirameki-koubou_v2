@@ -217,7 +217,22 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 
 .pick-row { display: flex; gap: 10px; }
 
-.object-card { font-size: 1.35rem; font-weight: 700; background: #fff; border: 2px solid var(--navy); border-radius: 12px; padding: 18px 22px; }
+.object-card {
+  min-width: min(240px, 100%);
+  font-size: 1.22rem;
+  font-weight: 700;
+  background: linear-gradient(145deg, #fffdf7, #f5ead1);
+  border: 2px solid var(--navy);
+  border-radius: 14px;
+  padding: 12px 18px 14px;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  box-shadow: inset 0 0 0 3px rgba(181,130,76,.14), 0 3px 0 #c5ad82;
+}
+.object-card-picture { width: 76px; height: 76px; display: block; }
+.object-card-picture svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 1px rgba(28,42,74,.18)); }
+.object-card-label { text-align: center; line-height: 1.45; }
 
 .solid-wrap svg { width: 130px; height: auto; }
 .s-face { fill: #ffd9a8; stroke: #b5824c; stroke-width: 2; }

@@ -14,18 +14,18 @@ const SOLIDS = [
 
 // 物の名前に かたちの語(はこ・つつ・ボール・まる・しかく)を含めない
 const OBJECTS = [
-  { name: 'ティッシュの ケース', solid: 'box' },
-  { name: 'おかしの パッケージ', solid: 'box' },
-  { name: 'ずかん', solid: 'box' },
-  { name: 'けしゴム', solid: 'box' },
-  { name: 'サイコロ', solid: 'cube' },
-  { name: 'つみき', solid: 'cube' },
-  { name: 'ラップの しん', solid: 'tube' },
-  { name: 'ジュースの かん', solid: 'tube' },
-  { name: 'えんぴつたて', solid: 'tube' },
-  { name: 'テニスの たま', solid: 'ball' },
-  { name: 'ビーだま', solid: 'ball' },
-  { name: 'オレンジ', solid: 'ball' }
+  { name: 'ティッシュの ケース', solid: 'box', icon: 'tissue-case' },
+  { name: 'おかしの パッケージ', solid: 'box', icon: 'snack-package' },
+  { name: 'ずかん', solid: 'box', icon: 'picture-book' },
+  { name: 'けしゴム', solid: 'box', icon: 'eraser' },
+  { name: 'サイコロ', solid: 'cube', icon: 'die' },
+  { name: 'つみき', solid: 'cube', icon: 'block' },
+  { name: 'ラップの しん', solid: 'tube', icon: 'wrap-core' },
+  { name: 'ジュースの かん', solid: 'tube', icon: 'juice-can' },
+  { name: 'えんぴつたて', solid: 'tube', icon: 'pencil-cup' },
+  { name: 'テニスの たま', solid: 'ball', icon: 'tennis-ball' },
+  { name: 'ビーだま', solid: 'ball', icon: 'marble' },
+  { name: 'オレンジ', solid: 'ball', icon: 'orange' }
 ];
 
 const ROLL_CASES = [
@@ -67,7 +67,7 @@ export const shapeStages = {
         : pick(rng, ['「' + object.name + '」に にている かたちは どれ？', '「' + object.name + '」と おなじ なかまの かたちは どれ？']),
       answer: solid.name,
       options: SOLIDS.map(s => s.name),
-      board: { type: 'object-card', label: object.name },
+      board: { type: 'object-card', label: object.name, icon: object.icon },
       hint1: 'かどが あるかな。まるい ところが あるかな。',
       hint2: 'ころがして みた ようすを おもいうかべよう。',
       explain: '「' + object.name + '」は ' + solid.name + 'の なかまだよ。',
@@ -110,7 +110,7 @@ export const shapeStages = {
         : pick(rng, ['「' + object.name + '」は どの なかま？', '「' + object.name + '」を しまう たなは どれ？']),
       answer: groups[object.solid],
       options: Object.values(groups),
-      board: { type: 'object-card', label: object.name },
+      board: { type: 'object-card', label: object.name, icon: object.icon },
       hint1: 'ころがるか、つめるかを かんがえよう。',
       hint2: 'かどと めんの かたちを みよう。',
       explain: '「' + object.name + '」は ' + groups[object.solid] + 'だね。',
