@@ -178,8 +178,20 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .group-op { font-weight: 700; color: #6b6455; }
 .two-groups.small .piece { width: 18px; height: 18px; }
 
-.tray.closed { display: grid; place-items: center; min-width: 90px; min-height: 70px; }
-.mystery { font-size: 2rem; font-weight: 700; color: var(--navy); }
+.tray.closed { display: grid; place-items: center; min-width: 116px; min-height: 96px; }
+.hidden-box { width: 96px; height: 76px; display: block; position: relative; }
+.hidden-box svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 1px rgba(28,42,74,.2)); }
+.mystery {
+  position: absolute;
+  left: 43%;
+  top: 57%;
+  transform: translate(-50%, -50%);
+  font-size: 1.75rem;
+  line-height: 1;
+  font-weight: 700;
+  color: #fff8df;
+  text-shadow: 0 2px 0 #654b34;
+}
 
 .bond-wrap { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; align-items: flex-start; }
 .bond-wrap .pool { background: #f2f8ff; border-color: #bcd4f0; }
