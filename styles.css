@@ -285,10 +285,42 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .bar-unit.on { background: linear-gradient(180deg, #7cc7a1, #2f9e6f); }
 .tape .bar-unit.on { background: linear-gradient(180deg, #ffd27c, #e8a33d); }
 
-.ruler-wrap { width: 100%; }
-.ruler-bar { height: 26px; background: linear-gradient(180deg, #7cc7a1, #2f9e6f); border-radius: 6px 12px 12px 6px; display: flex; align-items: center; padding-left: 8px; color: #fff; font-size: .8rem; }
-.ruler-blocks { display: flex; margin-top: 6px; }
-.ruler-block { width: 10%; height: 40px; background: linear-gradient(180deg, #ffe2b0, #e8a33d); border: 1.5px solid #b5824c; display: grid; place-items: center; }
+.ruler-wrap { width: 100%; padding: 8px 5px 5px; background: linear-gradient(180deg, #fffdf7, #f6ecd6); border-radius: 9px; }
+.ruler-bar {
+  height: 28px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #9bd1b5, #2f9e6f 72%);
+  border: 1.5px solid #316b55;
+  border-radius: 6px 12px 12px 6px;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  color: #fff;
+  font-size: .8rem;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(28,42,74,.45);
+  box-shadow: inset 0 3px 0 rgba(255,255,255,.25), inset 0 -3px 0 rgba(28,42,74,.16);
+}
+.ruler-bar span { position: relative; z-index: 1; }
+.ruler-bar::before {
+  content: "";
+  position: absolute;
+  inset: 4px 6px auto;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.32);
+}
+.ruler-blocks { display: flex; margin-top: 7px; border-radius: 5px; overflow: hidden; box-shadow: 0 2px 0 rgba(101,75,52,.2); }
+.ruler-block {
+  width: 10%;
+  height: 40px;
+  background: linear-gradient(145deg, #ffe9bd 0 30%, #e8ad65 31% 72%, #c98243 100%);
+  border: 1.5px solid #8c603b;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 2px 2px 0 rgba(255,255,255,.28), inset -2px -2px 0 rgba(101,75,52,.12);
+}
 .ruler-block b { font-size: .78rem; color: #6b4a1f; }
 .ruler-block.selected { outline: 3px solid var(--navy); outline-offset: -2px; }
 
@@ -505,10 +537,23 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .obj-string { height: 7px; background: #7a5230; border-radius: 4px; margin: 7px 0; }
 .obj-tape { background: linear-gradient(180deg, #bcd8f2, #7fb1e8); border: 1.5px dashed #4a7fd0; height: 18px; }
 
-/* ブロックはかりの帯も対象の見た目に合わせる */
-.ruler-bar.obj-ribbon { background: linear-gradient(180deg, #ff9db4, #e0607f); border-radius: 6px 2px 2px 6px; }
-.ruler-bar.obj-stick { background: linear-gradient(180deg, #c89a62, #8a5a2c); }
-.ruler-bar.obj-tape { background: linear-gradient(180deg, #9cc4ec, #6ba3e0); }
+/* ブロックはかりの帯も対象の形と、木製玩具の面の質感に合わせる */
+.ruler-bar.obj-ribbon {
+  background: linear-gradient(180deg, #ffc2cf 0 24%, #e66f8b 25% 76%, #bd4f6a 100%);
+  border-color: #8f3f58;
+  border-radius: 6px 1px 1px 6px;
+}
+.ruler-bar.obj-stick {
+  background: repeating-linear-gradient(168deg, transparent 0 10px, rgba(100,61,32,.18) 11px 12px), linear-gradient(180deg, #dcb27d, #956238);
+  border-color: #69472f;
+  border-radius: 13px;
+}
+.ruler-bar.obj-tape {
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 10px, transparent 10px 20px), linear-gradient(180deg, #c7e1f5, #6fa8dc);
+  border: 1.5px dashed #3f6e9e;
+  clip-path: polygon(0 4%, calc(100% - 5px) 4%, 100% 18%, calc(100% - 3px) 34%, 100% 50%, calc(100% - 3px) 66%, 100% 82%, calc(100% - 5px) 96%, 0 96%);
+  border-radius: 2px;
+}
 
 /* ---------- 学習対象の絵(SVGの実物アイコン) ---------- */
 .piece.svg-icon { background: none; box-shadow: none; border-radius: 0; }
