@@ -327,9 +327,9 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 
 .share-wrap { display: grid; gap: 10px; justify-items: center; }
 .share-wrap .pool { background: #fbf7ec; border: 1.5px dashed #d8ccae; border-radius: 10px; padding: 8px; }
-.people-row { display: flex; gap: 14px; }
-.person { width: 30px; height: 38px; background: var(--navy); border-radius: 14px 14px 6px 6px; position: relative; }
-.person::before { content: ""; position: absolute; top: -14px; left: 7px; width: 16px; height: 16px; border-radius: 50%; background: var(--navy); }
+.people-row { display: flex; gap: clamp(5px, 2.4vw, 11px); align-items: flex-end; justify-content: center; }
+.person { width: clamp(38px, 11vw, 46px); height: clamp(50px, 14vw, 60px); display: block; }
+.person svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 1px rgba(28,42,74,.2)); }
 
 /* ---------- 答えの入力 ---------- */
 .answer-area { margin-top: 14px; }
