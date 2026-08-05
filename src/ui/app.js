@@ -159,7 +159,7 @@ function stageListScreen(lineId) {
       '<span class="stage-no">' + (i + 1) + '</span>' +
       '<span class="stage-name">' + esc(stage.name) + '</span>' +
       '<span class="stage-action">' + esc(stage.action) + '</span>' +
-      '<span class="stage-stars">' + (unlocked ? stars : '🔒') + '</span>' +
+      '<span class="stage-stars">' + (unlocked ? stars : '<span class="lock-icon" role="img" aria-label="ロック"></span>') + '</span>' +
       '</button>';
   }).join('');
   show(

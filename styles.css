@@ -114,6 +114,36 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 .stage-name { grid-area: name; font-weight: 700; }
 .stage-action { grid-area: action; font-size: .78rem; color: #6b6455; }
 .stage-stars { grid-area: stars; color: var(--wood); letter-spacing: .1em; }
+.lock-icon {
+  width: 18px;
+  height: 14px;
+  display: inline-block;
+  position: relative;
+  border: 2px solid var(--navy);
+  border-radius: 3px;
+  background: #d6c7aa;
+}
+.lock-icon::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: -10px;
+  width: 8px;
+  height: 9px;
+  border: 2px solid var(--navy);
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+}
+.lock-icon::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  width: 3px;
+  height: 5px;
+  border-radius: 2px;
+  background: var(--navy);
+}
 
 /* ---------- プレイ画面 ---------- */
 .play { padding: 12px 14px; }
