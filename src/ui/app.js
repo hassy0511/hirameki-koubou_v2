@@ -8,7 +8,7 @@
 import { G1, makePack } from '../gen/index.js';
 import { validatePack } from '../engine/spec.js';
 import { stageAt } from '../curriculum/g1.js';
-import { renderBoard } from './boards.js';
+import { iconSvg, renderBoard } from './boards.js';
 
 const STORE_KEY = 'hirameki-v2';
 const root = document.getElementById('app');
@@ -100,6 +100,15 @@ const LINE_INTROS = {
   solve: 'しらべる つくえの きろくが きえた。ならべて かぞえて、きろくを つくりなおそう。'
 };
 
+const LINE_ICONS = {
+  number: 'device-number',
+  addition: 'device-addition',
+  subtraction: 'device-subtraction',
+  measure: 'device-measure',
+  shape: 'device-shape',
+  solve: 'device-solve'
+};
+
 function lineIntroScreen(lineId) {
   session = null;
   const line = G1.lines[lineId];
@@ -117,6 +126,7 @@ function homeScreen() {
     const line = G1.lines[lineId];
     const done = clearedCount(lineId);
     return '<button type="button" class="line-card line-' + lineId + '" data-line="' + lineId + '">' +
+      '<span class="line-icon" role="img" aria-label="' + esc(line.device) + '">' + iconSvg(LINE_ICONS[lineId]) + '</span>' +
       '<span class="line-name">' + esc(line.name) + '</span>' +
       '<span class="line-device">' + esc(line.device) + '</span>' +
       '<span class="line-progress">' + done + ' / ' + line.stages.length + '</span>' +
