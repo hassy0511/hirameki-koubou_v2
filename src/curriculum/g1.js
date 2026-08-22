@@ -42,7 +42,7 @@ export const G1 = {
         { id: 'add_ready', name: 'あわせて いくつ', action: 'ふたつの まとまりを あわせて かぞえる', goal: 'g1.add.ready', kinds: ['choice'] },
         { id: 'add_bond', name: 'あと いくつ？', action: 'めあての かずまで いくつか かんがえる', goal: 'g1.add.bond', kinds: ['count-tap', 'keypad'] },
         { id: 'add_combine', name: 'あわせると いくつ？', action: 'ふたつの かずを あわせる', goal: 'g1.add.combine', kinds: ['choice'] },
-        { id: 'add_equation', name: 'しきで たしざん', action: 'たしざんの しきに こたえる', goal: 'g1.add.equation', kinds: ['keypad'] },
+        { id: 'add_equation', name: 'しきで たしざん', action: 'たしざんの しきに こたえる', goal: 'g1.add.equation', kinds: ['keypad', 'equation-build'] },
         { id: 'add_check', name: 'たしざんの おさらい', action: 'ここまでの たしざんを たしかめる', goal: 'g1.add.review1', kinds: ['choice', 'count-tap', 'keypad'], assessment: true, sources: ['add_ready', 'add_bond', 'add_combine', 'add_equation'] },
         { id: 'add_ten_ready', name: '10と いくつ', action: '10の まとまりと ばらを あわせる', goal: 'g1.add.ten_ready', kinds: ['keypad'] },
         { id: 'add_teens', name: '20までの たしざん', action: 'くりあがりの ない たしざん', goal: 'g1.add.teens', kinds: ['keypad'] },
@@ -60,7 +60,7 @@ export const G1 = {
         { id: 'sub_split', name: 'かずを わける', action: 'かくれた かずを かんがえる', goal: 'g1.sub.split', kinds: ['keypad'] },
         { id: 'sub_remain', name: 'のこりは いくつ？', action: 'とった のこりを かんがえる', goal: 'g1.sub.remain', kinds: ['remove', 'choice'] },
         { id: 'sub_zero', name: '0の ひきざん', action: 'ぜんぶ とる・とらないを かんがえる', goal: 'g1.sub.zero', kinds: ['choice'], smallAnswerSpace: true, zeroMeaningful: true, answerEcho: true, maxRepeat: 4 },
-        { id: 'sub_equation', name: 'しきで ひきざん', action: 'ひきざんの しきに こたえる', goal: 'g1.sub.equation', kinds: ['keypad'] },
+        { id: 'sub_equation', name: 'しきで ひきざん', action: 'ひきざんの しきに こたえる', goal: 'g1.sub.equation', kinds: ['keypad', 'equation-build'] },
         { id: 'sub_check', name: 'ひきざんの おさらい', action: 'ここまでの ひきざんを たしかめる', goal: 'g1.sub.review1', kinds: ['keypad', 'remove', 'choice'], assessment: true, sources: ['sub_split', 'sub_remain', 'sub_zero', 'sub_equation'], smallAnswerSpace: true, zeroMeaningful: true, answerEcho: true },
         { id: 'sub_teens', name: '20までの ひきざん', action: 'ばらから ひいて のこりを だす', goal: 'g1.sub.teens', kinds: ['keypad'] },
         { id: 'sub_three', name: '3つの かず', action: 'ひだりから じゅんに けいさんする', goal: 'g1.sub.three', kinds: ['keypad'] },
@@ -117,11 +117,11 @@ export const G1 = {
         { id: 'sol_graph_read', name: 'グラフを よむ', action: 'グラフから よみとる', goal: 'g1.data.read', kinds: ['choice'], smallAnswerSpace: true },
         { id: 'sol_check', name: 'グラフの おさらい', action: 'グラフの つかいかたを たしかめる', goal: 'g1.data.review', kinds: ['choice', 'count-tap'], assessment: true, sources: ['sol_sort', 'sol_line', 'sol_graph_make', 'sol_graph_read'], smallAnswerSpace: true, represent: true },
         { id: 'sol_op', name: 'たすのかな ひくのかな', action: 'ふえたか へったかを かんがえる', goal: 'g1.story.operation', kinds: ['choice'], smallAnswerSpace: true, balanceAnswers: true, maxRepeat: 4 },
-        { id: 'sol_expr', name: 'おはなしに あう しき', action: 'おはなしを しきに する', goal: 'g1.story.expression', kinds: ['choice'] },
-        { id: 'sol_answer', name: 'おはなしの こたえ', action: 'おはなしの かずを もとめる', goal: 'g1.story.answer', kinds: ['keypad'] },
+        { id: 'sol_expr', name: 'おはなしに あう しき', action: 'おはなしを しきに つくる', goal: 'g1.story.expression', kinds: ['equation-build'] },
+        { id: 'sol_answer', name: 'おはなしの こたえ', action: 'しきを つくって こたえまで もとめる', goal: 'g1.story.answer', kinds: ['equation-build'] },
         { id: 'sol_pict_expr', name: 'えに あう しき', action: 'えを しきに する', goal: 'g1.story.picture', kinds: ['choice'] },
         { id: 'sol_share', name: 'おなじ かずずつ', action: 'おなじ かずずつ わける', goal: 'g1.story.share', kinds: ['keypad'] },
-        { id: 'sol_core', name: 'しらべる まとめ', action: 'おはなしと しきを ぜんぶ つかう', goal: 'g1.story.review', kinds: ['choice', 'keypad'], assessment: true, sources: ['sol_op', 'sol_expr', 'sol_answer', 'sol_pict_expr', 'sol_share'], smallAnswerSpace: true }
+        { id: 'sol_core', name: 'しらべる まとめ', action: 'おはなしと しきを ぜんぶ つかう', goal: 'g1.story.review', kinds: ['choice', 'keypad', 'equation-build'], assessment: true, sources: ['sol_op', 'sol_expr', 'sol_answer', 'sol_pict_expr', 'sol_share'], smallAnswerSpace: true }
       ]
     }
   }

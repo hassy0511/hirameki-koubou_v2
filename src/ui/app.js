@@ -198,6 +198,9 @@ function prepareQuestion() {
     pos: q.board && q.board.type === 'numberline' ? q.board.start : 0,
     clockH: q.board && q.board.startH != null ? q.board.startH : 0,
     clockM: q.board && q.board.startM != null ? q.board.startM : 0,
+    expr: '',
+    eqStep: 'expr',
+    hintOverride: null,
     wrongs: 0,
     feedback: null
   };
@@ -212,7 +215,8 @@ function kindLabel(kind) {
     remove: 'タップして とる',
     numberline: 'かずの せんを あるく',
     'clock-set': 'はりを あわせる',
-    grid: 'マスを つくる'
+    grid: 'マスを つくる',
+    'equation-build': 'しきを つくる'
   }[kind] || '';
 }
 
@@ -254,6 +258,25 @@ function renderAnswer(q) {
     return '<div class="keypad-wrap"><div class="key-display">' + (ui.input === '' ? '<span class="ghost">？</span>' : esc(ui.input)) + '</div>' +
       '<div class="keypad">' + keys + '<button type="button" class="key erase" data-erase>けす</button></div></div>' + commitRow(ui.input !== '');
   }
+  if (q.kind === 'equation-build') {
+    // 2段: ①しきを つくる(＋−キーつき) → ②こたえを いれる。
+    // 候補は画面に出さない。文章から数と演算を子どもが取り出す(FB-03)
+    const keys = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(k => '<button type="button" class="key" data-key="' + k + '">' + k + '</button>').join('');
+    if (ui.eqStep === 'expr') {
+      const ready = /^\d+[＋−]\d+$/.test(ui.expr);
+      return '<div class="keypad-wrap">' +
+        '<p class="eq-step">しきを つくろう</p>' +
+        '<div class="key-display eq">' + (ui.expr === '' ? '<span class="ghost">しき</span>' : esc(ui.expr)) + '</div>' +
+        '<div class="keypad">' + keys +
+        '<button type="button" class="key op" data-op="＋">＋</button>' +
+        '<button type="button" class="key op" data-op="−">−</button>' +
+        '<button type="button" class="key erase" data-erase>けす</button></div></div>' + commitRow(ready, true);
+    }
+    return '<div class="keypad-wrap">' +
+      '<p class="eq-step">しきが できた！ こたえも いれよう</p>' +
+      '<div class="key-display eq">' + esc(ui.expr) + '＝' + (ui.input === '' ? '<span class="ghost">？</span>' : esc(ui.input)) + '</div>' +
+      '<div class="keypad">' + keys + '<button type="button" class="key erase" data-erase>けす</button></div></div>' + commitRow(ui.input !== '');
+  }
   if (q.kind === 'count-tap' || q.kind === 'remove' || q.kind === 'grid' || q.kind === 'pick-one') {
     const count = ui.selected.size;
     const note = q.kind === 'pick-one' ? (count ? 'えらんだよ' : 'まだ えらんで いないよ')
@@ -290,7 +313,7 @@ function renderFeedback(q) {
       '<button type="button" class="commit" data-next>つぎへ →</button></div>';
   }
   if (fb.kind === 'hint') {
-    return '<div class="feedback hint"><h3>ヒント</h3><p>' + esc(q.hint1) + '</p>' +
+    return '<div class="feedback hint"><h3>ヒント</h3><p>' + esc(q.ui.hintOverride || q.hint1) + '</p>' +
       '<button type="button" class="commit" data-retry>もういちど やってみる</button></div>';
   }
   return '<div class="feedback teach"><h3>いっしょに たしかめよう</h3><p>' + esc(q.hint2) + '</p><p class="teach-answer">' + esc(q.explain) + '</p>' +
@@ -302,7 +325,7 @@ function renderFeedback(q) {
 function collectedAnswer(q) {
   const ui = q.ui;
   if (q.kind === 'choice') return ui.choice;
-  if (q.kind === 'keypad') return Number(ui.input);
+  if (q.kind === 'keypad' || q.kind === 'equation-build') return Number(ui.input);
   if (q.kind === 'count-tap' || q.kind === 'remove') return ui.selected.size;
   if (q.kind === 'pick-one') return ui.selected.values().next().value;
   if (q.kind === 'grid') return Array.from(ui.selected).sort((a, b) => a - b).join(',');
@@ -313,6 +336,37 @@ function collectedAnswer(q) {
 
 function commit() {
   const q = currentQuestion();
+  if (q.kind === 'equation-build' && q.ui.eqStep === 'expr') {
+    const m = q.ui.expr.match(/^(\d+)([＋−])(\d+)$/);
+    const math = q.math;
+    let ok = false;
+    let reversedSub = false;
+    if (m) {
+      const x = Number(m[1]);
+      const y = Number(m[3]);
+      const op = m[2];
+      if (math.kind === 'add') {
+        ok = op === '＋' && ((x === math.a && y === math.b) || (x === math.b && y === math.a));
+      } else {
+        ok = op === '−' && x === math.a && y === math.b;
+        reversedSub = op === '−' && x === math.b && y === math.a;
+      }
+    }
+    if (ok) {
+      if (q.askAnswer === false) {
+        if (q.ui.wrongs === 0) session.firstTry += 1;
+        q.ui.feedback = { kind: 'good', first: q.ui.wrongs === 0 };
+      } else {
+        q.ui.eqStep = 'answer';
+      }
+    } else {
+      q.ui.wrongs += 1;
+      q.ui.hintOverride = reversedSub ? 'ひきざんは おおきい かずから とるよ。じゅんばんを みなおそう。' : null;
+      q.ui.feedback = q.ui.wrongs >= 2 ? { kind: 'teach' } : { kind: 'hint' };
+    }
+    renderPlay();
+    return;
+  }
   const got = collectedAnswer(q);
   const ok = String(got) === String(q.answer);
   if (ok) {
@@ -338,9 +392,11 @@ function nextQuestion() {
 function retryQuestion() {
   const q = currentQuestion();
   q.ui.feedback = null;
+  q.ui.hintOverride = null;
   q.ui.selected = new Set();
   q.ui.choice = null;
   q.ui.input = '';
+  if (q.kind === 'equation-build' && q.ui.eqStep === 'expr') q.ui.expr = '';
   if (q.board && q.board.type === 'numberline') q.ui.pos = q.board.start;
   if (q.board && q.board.startH != null) { q.ui.clockH = q.board.startH; q.ui.clockM = q.board.startM; }
   renderPlay();
@@ -426,11 +482,26 @@ root.addEventListener('click', event => {
   }
   if (t.dataset.choice != null) { q.ui.choice = t.dataset.choice; renderPlay(); return; }
   if (t.dataset.key != null) {
-    if (q.ui.input.length < 3) q.ui.input += t.dataset.key;
+    if (q.kind === 'equation-build' && q.ui.eqStep === 'expr') {
+      const lastNumber = q.ui.expr.match(/(\d*)$/)[1];
+      if (lastNumber.length < 2 && q.ui.expr.length < 5) q.ui.expr += t.dataset.key;
+    } else if (q.ui.input.length < 3) {
+      q.ui.input += t.dataset.key;
+    }
     renderPlay();
     return;
   }
-  if (t.hasAttribute('data-erase')) { q.ui.input = q.ui.input.slice(0, -1); renderPlay(); return; }
+  if (t.dataset.op != null) {
+    if (/^\d+$/.test(q.ui.expr)) q.ui.expr += t.dataset.op;
+    renderPlay();
+    return;
+  }
+  if (t.hasAttribute('data-erase')) {
+    if (q.kind === 'equation-build' && q.ui.eqStep === 'expr') q.ui.expr = q.ui.expr.slice(0, -1);
+    else q.ui.input = q.ui.input.slice(0, -1);
+    renderPlay();
+    return;
+  }
   if (t.dataset.piece != null) {
     const index = Number(t.dataset.piece);
     if (q.kind === 'pick-one') {
@@ -480,6 +551,13 @@ window.__hirameki = {
     // 正解をUI状態に流し込み、実際の commit 経路で確定する(描画・判定・遷移を検証するため)
     const q = currentQuestion();
     if (q.ui.feedback) { nextQuestion(); return; }
+    if (q.kind === 'equation-build') {
+      q.ui.eqStep = 'expr';
+      q.ui.expr = String(q.math.a) + (q.math.kind === 'add' ? '＋' : '−') + q.math.b;
+      commit();
+      if (!q.ui.feedback && q.askAnswer !== false) { q.ui.input = String(q.answer); commit(); }
+      return;
+    }
     if (q.kind === 'choice') q.ui.choice = String(q.answer);
     else if (q.kind === 'keypad') q.ui.input = String(q.answer);
     else if (q.kind === 'count-tap' || q.kind === 'remove') { q.ui.selected = new Set(Array.from({ length: Number(q.answer) }, (_, i) => i)); }

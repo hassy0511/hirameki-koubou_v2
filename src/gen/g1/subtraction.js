@@ -159,14 +159,27 @@ export const subtractionStages = {
   sub_equation(slot, rng) {
     const [a, b, rest] = subPair(rng, ranged(rng, slot, [[4, 6], [5, 8], [7, 10], [9, 10]]));
     const story = slot === 4;
-    const scene = story ? subScene(rng, a, b) : null;
+    // おはなしの回は、しきを子どもが自分で作る(FB-03)。ひきざんは a−b の順だけ正解
+    if (story) {
+      const scene = subScene(rng, a, b);
+      return Q({
+        kind: 'equation-build',
+        prompt: scene.text,
+        answer: rest,
+        board: { type: 'remove-shown', total: a, removed: b, icon: scene.icon, countable: true },
+        hint1: 'ふえる おはなしかな、へる おはなしかな。',
+        hint2: 'しきは ' + a + '−' + b + '。のこりも いれよう。',
+        explain: subExplain(a, b) + ' しきでは ' + a + '−' + b + '＝' + rest + ' と かくよ。',
+        story,
+        learningKey: 'sub:' + a + ':' + b,
+        math: { kind: 'sub', a, b }
+      });
+    }
     return Q({
       kind: 'keypad',
-      prompt: story ? scene.text : 'しきの こたえは いくつ？',
+      prompt: 'しきの こたえは いくつ？',
       answer: rest,
-      board: story
-        ? { type: 'remove-shown', total: a, removed: b, icon: scene.icon, countable: true }
-        : { type: 'equation', text: a + '−' + b + '＝□', dots: [a, b] },
+      board: { type: 'equation', text: a + '−' + b + '＝□', dots: [a, b] },
       hint1: a + 'から ' + b + 'を へらす しきだよ。',
       hint2: a + 'から 1つずつ ' + b + 'かい もどって かぞえよう。',
       explain: subExplain(a, b) + ' しきでは ' + a + '−' + b + '＝' + rest + ' と かくよ。',

@@ -26,7 +26,8 @@ export const INSTRUCTIONS = Object.freeze({
   remove: 'とる まるを タップして 「けってい」',
   numberline: 'やじるしで うごいて 「けってい」',
   'clock-set': 'はりを うごかして 「けってい」',
-  grid: 'マスを タップして 「けってい」'
+  grid: 'マスを タップして 「けってい」',
+  'equation-build': 'すうじと ＋−で しきを つくって 「けってい」'
 });
 
 export function Q(data) {

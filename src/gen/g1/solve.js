@@ -219,6 +219,7 @@ export const solveStages = {
   },
 
   // ── おはなしに あう しき ──
+  // 選択肢からは選ばせない。文章から数と演算を取り出して、しきを自分で打つ(FB-03)
   sol_expr(slot, rng) {
     const add = rng() < 0.5;
     const [a, b] = storyNumbers(rng, slot, add);
@@ -227,23 +228,17 @@ export const solveStages = {
     const taleOf = tale(rng, item.name, who, add, a, b);
     const story = slot === 4;
     const correct = a + (add ? '＋' : '−') + b;
-    const optionSet = new Set([correct, a + (add ? '−' : '＋') + b]);
-    if (add || a !== b) optionSet.add(b <= a ? a + (add ? '＋' : '−') + Math.max(1, b - 1) : correct);
-    optionSet.add((a + 1) + (add ? '＋' : '−') + b);
-    const options = shuffle(rng, Array.from(optionSet).filter(expr => {
-      const m = expr.match(/^([0-9]+)−([0-9]+)$/);
-      return !m || Number(m[1]) >= Number(m[2]);
-    }).slice(0, 3));
-    if (!options.includes(correct)) options[0] = correct;
+    const answer = add ? a + b : a - b;
     return Q({
-      kind: 'choice',
-      prompt: taleOf.text + ' あう しきは どれ？',
-      answer: correct,
-      options,
+      kind: 'equation-build',
+      prompt: taleOf.text + ' あう しきを つくろう。',
+      instruction: 'すうじと ＋−で しきを つくって 「けってい」',
+      answer,
+      askAnswer: false,
       board: { type: 'story-strip', a, b, add, icon: item.icon, verb: taleOf.verb },
       hint1: 'はじめの かずと、' + (add ? 'ふえた' : 'へった') + ' かずを さがそう。',
       hint2: add ? 'ふえる ときは ＋の しきに なるよ。' : 'へる ときは −の しきに なるよ。',
-      explain: 'はじめ ' + a + 'こ、' + (add ? b + 'こ ふえた' : b + 'こ へった') + '。だから しきは ' + correct + ' だよ。',
+      explain: 'はじめ ' + a + 'こ、' + (add ? b + 'こ ふえた' : b + 'こ へった') + '。しきは ' + correct + '。こたえは ' + answer + 'こに なるね。',
       story,
       learningKey: 'expr:' + correct,
       math: { kind: add ? 'add' : 'sub', a, b }
@@ -260,7 +255,7 @@ export const solveStages = {
     const taleOf = tale(rng, item.name, who, add, a, b);
     const story = slot === 4;
     return Q({
-      kind: 'keypad',
+      kind: 'equation-build',
       prompt: taleOf.text + (add ? ' ぜんぶで いくつ？' : ' のこりは いくつ？'),
       answer,
       board: { type: 'story-strip', a, b, add, icon: item.icon, verb: taleOf.verb },

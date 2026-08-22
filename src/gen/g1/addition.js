@@ -101,14 +101,27 @@ export const additionStages = {
   add_equation(slot, rng) {
     const [a, b, sum] = addPair(rng, ranged(rng, slot, [[3, 5], [5, 8], [7, 10], [9, 10]]), 3);
     const story = slot === 4;
-    const scene = story ? addScene(rng, a, b) : null;
+    // おはなしの回は、しきを子どもが自分で作る(FB-03)。順不同で正解
+    if (story) {
+      const scene = addScene(rng, a, b);
+      return Q({
+        kind: 'equation-build',
+        prompt: scene.text,
+        answer: sum,
+        board: { type: 'two-groups', left: a, right: b, icon: scene.icon, merge: true, countable: true },
+        hint1: 'ふえる おはなしかな、へる おはなしかな。',
+        hint2: 'しきは ' + a + '＋' + b + '。こたえも いれよう。',
+        explain: a + 'こと ' + b + 'こで ' + sum + 'こ。しきでは ' + a + '＋' + b + '＝' + sum + ' と かくよ。',
+        story,
+        learningKey: 'add:' + a + ':' + b,
+        math: { kind: 'add', a, b }
+      });
+    }
     return Q({
       kind: 'keypad',
-      prompt: story ? scene.text : 'しきの こたえは いくつ？',
+      prompt: 'しきの こたえは いくつ？',
       answer: sum,
-      board: story
-        ? { type: 'two-groups', left: a, right: b, icon: scene.icon, merge: true, countable: true }
-        : { type: 'equation', text: a + '＋' + b + '＝□', dots: [a, b] },
+      board: { type: 'equation', text: a + '＋' + b + '＝□', dots: [a, b] },
       hint1: a + 'に ' + b + 'を たす しきだよ。',
       hint2: a + 'から つづきを ' + b + 'かい かぞえよう。',
       explain: a + 'こと ' + b + 'こで ' + sum + 'こ。しきでは ' + a + '＋' + b + '＝' + sum + ' と かくよ。',

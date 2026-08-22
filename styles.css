@@ -619,3 +619,8 @@ button { font: inherit; cursor: pointer; border: none; background: none; }
 /* うごきかたを問う盤面は 物そのものの絵を大きめに出す */
 .solid-object { display: block; width: 96px; height: 96px; margin: 0 auto; }
 .solid-object svg { width: 100%; height: 100%; display: block; }
+
+/* ---------- しきキーパッド(equation-build) ---------- */
+.eq-step { font-size: .85rem; font-weight: 700; color: #6b6455; background: #f0e6cf; border-radius: 999px; padding: 4px 12px; }
+.key-display.eq { min-width: 180px; letter-spacing: .06em; }
+.key.op { background: linear-gradient(180deg, #ffd9a0, #f0b45e); border-color: #a06a1e; color: #5a3a10; }

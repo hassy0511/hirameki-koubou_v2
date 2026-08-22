@@ -11,7 +11,8 @@ export const KINDS = Object.freeze([
   'remove',     // 置いてあるものを タップして 取り除いて けってい
   'numberline', // かずの線を 歩いて けってい
   'clock-set',  // とけいの針を 動かして けってい
-  'grid'        // マス目を タップして 形を作って けってい
+  'grid',       // マス目を タップして 形を作って けってい
+  'equation-build' // すうじと＋−のキーで しきを作り、つづけて こたえを いれて けってい
 ]);
 
 // 小1の画面に出してよい文字。漢字は一切出さない(ヒント・解説も同じ)。
@@ -130,6 +131,20 @@ export function validateQuestion(q, stage, label) {
   if (q.kind === 'keypad') {
     if (numericAnswer === null) err('数字入力なのに答えが数でない');
     if (numericAnswer > 120) err('小1の入力範囲を超える答え: ' + q.answer);
+  }
+  if (q.kind === 'equation-build') {
+    // 式づくり: 文章から数と演算を子どもが取り出す課題。
+    // 採点は math の {kind, a, b} が根拠(たし算は順不同で正解にする)。
+    const m = q.math || {};
+    if (m.kind !== 'add' && m.kind !== 'sub') err('式づくりなのに math.kind が add/sub でない');
+    if (!Number.isFinite(m.a) || !Number.isFinite(m.b)) err('式づくりの a, b が数でない');
+    if (m.a < 1 || m.b < 1 || m.a > 99 || m.b > 99) err('式づくりの数が小1の範囲外: ' + m.a + ',' + m.b);
+    if (m.kind === 'sub' && !(m.a > m.b)) err('引き算なのに a>b でない: ' + m.a + '−' + m.b);
+    const expect = m.kind === 'add' ? m.a + m.b : m.a - m.b;
+    if (numericAnswer !== expect) err('式づくりの答えが式と合わない: ' + q.answer + ' ≠ ' + expect);
+    // 数は必ず文章の中にある(画面にない情報で採点しない、の原則)
+    if (!bareNumber(m.a).test(q.prompt)) err('式に使う数 ' + m.a + ' が文章に無い: ' + q.prompt);
+    if (!bareNumber(m.b).test(q.prompt)) err('式に使う数 ' + m.b + ' が文章に無い: ' + q.prompt);
   }
   return errors;
 }
