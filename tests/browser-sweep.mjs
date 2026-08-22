@@ -1,7 +1,7 @@
 // 実ブラウザでの全ステージ描画・進行スイープ。
 //   node tests/browser-sweep.mjs [serverURL]
 // 前提: リポジトリ直下で python3 -m http.server などのローカルサーバが動いていること。
-// 検査: 全66ステージ×8問で 盤面が描かれる・consoleエラーが無い・正答で最後まで進める。
+// 検査: 全ステージ×8問で 盤面が描かれる・consoleエラーが無い・正答で最後まで進める。
 // 画面幅は iPhone 相当の 390px。どの問題も 横に はみ出さないことを 毎問たしかめる。
 
 import { chromium } from 'playwright';
@@ -17,13 +17,16 @@ page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE: ' + m.
 
 await page.goto(BASE + '/index.html', { waitUntil: 'networkidle' });
 const lineOrder = await page.evaluate(() => window.__hirameki.G1.lineOrder);
+const stageCounts = await page.evaluate(() => Object.fromEntries(
+  window.__hirameki.G1.lineOrder.map(l => [l, window.__hirameki.G1.lines[l].stages.length])
+));
 
 let stagesChecked = 0;
 let questionsChecked = 0;
 const problems = [];
 
 for (const lineId of lineOrder) {
-  for (let si = 0; si < 11; si += 1) {
+  for (let si = 0; si < stageCounts[lineId]; si += 1) {
     await page.evaluate(([l, s]) => window.__hirameki.open(l, s, 24680), [lineId, si]);
     for (let q = 0; q < 8; q += 1) {
       const info = await page.evaluate(() => {

@@ -21,6 +21,23 @@ function addScene(rng, a, b) {
   return { text: pick(rng, scenes), icon: item.icon };
 }
 
+// 単元の さいごの1問(8問目)は、場面を自分で しきに して こたえる(FB-03 D方針)
+function addCapstone(rng, a, b, board, key) {
+  const scene = addScene(rng, a, b);
+  return Q({
+    kind: 'equation-build',
+    prompt: scene.text,
+    answer: a + b,
+    board: board || { type: 'two-groups', left: a, right: b, icon: scene.icon, merge: true, countable: true },
+    hint1: 'ふえる おはなしかな、へる おはなしかな。',
+    hint2: 'しきは ' + a + '＋' + b + '。こたえも いれよう。',
+    explain: a + 'と ' + b + 'で ' + (a + b) + '。しきでは ' + a + '＋' + b + '＝' + (a + b) + ' と かくよ。',
+    story: false,
+    learningKey: key,
+    math: { kind: 'add', a, b }
+  });
+}
+
 const ADD_HINT1 = 'おおきい ほうの かずから、つづきを かぞえよう。';
 const ADD_HINT2 = 'まるを ぜんぶ あわせて、1つずつ かぞえなおしても いいよ。';
 
@@ -101,6 +118,7 @@ export const additionStages = {
   add_equation(slot, rng) {
     const [a, b, sum] = addPair(rng, ranged(rng, slot, [[3, 5], [5, 8], [7, 10], [9, 10]]), 3);
     const story = slot === 4;
+    if (slot === 7) return addCapstone(rng, a, b, null, 'add:' + a + ':' + b);
     // おはなしの回は、しきを子どもが自分で作る(FB-03)。順不同で正解
     if (story) {
       const scene = addScene(rng, a, b);
@@ -135,6 +153,7 @@ export const additionStages = {
   add_ten_ready(slot, rng) {
     const ones = ranged(rng, slot, [[1, 3], [2, 5], [4, 8], [6, 9]]);
     const answer = 10 + ones;
+    if (slot === 7) return addCapstone(rng, 10, ones, null, 'ten+:' + ones);
     const story = slot === 4;
     const item = thing(rng);
     return Q({
@@ -158,6 +177,7 @@ export const additionStages = {
     const a = 10 + ranged(rng, slot, [[1, 3], [2, 5], [3, 6], [4, 6]]);
     const b = randInt(rng, 1, Math.min(3 + band(slotSafe(slot)), 19 - a > 9 ? 9 : 19 - a));
     const sum = a + b;
+    if (slot === 7) return addCapstone(rng, a, b, null, 'teens:' + a + ':' + b);
     const story = slot === 4;
     const scene = story ? addScene(rng, a, b) : null;
     return Q({
@@ -206,6 +226,32 @@ export const additionStages = {
   },
 
   // ── たしざん れんしゅう ──
+  // ── なん10の たしざん(10の たばで たす)。指導要領1年「簡単な2位数の加法」──
+  add_tens(slot, rng) {
+    const aT = ranged(rng, slot, [[2, 4], [2, 6], [3, 7], [4, 8]]);
+    let bT = randInt(rng, 1, Math.max(1, Math.min(8, 10 - aT)));
+    if (bT === aT && bT > 1) bT -= 1; // 見た目が同じ2群を避ける
+    const a = aT * 10;
+    const b = bT * 10;
+    const story = slot === 4;
+    if (slot === 7) return addCapstone(rng, a, b, { type: 'rod-groups', left: aT, right: bT, countable: true }, 'tens+:' + aT + ':' + bT);
+    const item = thing(rng);
+    return Q({
+      kind: 'keypad',
+      prompt: story
+        ? item.name + 'が 10こいりの はこで ' + aT + 'はこ。あと ' + bT + 'はこ もらった。ぜんぶで なんこ？'
+        : pick(rng, [a + 'と ' + b + 'を あわせると いくつ？', '10の たばが ' + aT + 'こと ' + bT + 'こ。ぜんぶで いくつ？']),
+      answer: a + b,
+      board: { type: 'rod-groups', left: aT, right: bT, countable: true },
+      hint1: '10の たばの かずで かんがえよう。',
+      hint2: aT + 'たばと ' + bT + 'たばで、なんたばに なるかな。',
+      explain: '10の たばが ' + (aT + bT) + 'こに なる。だから ' + (a + b) + 'だよ。',
+      story,
+      learningKey: 'tens+:' + aT + ':' + bT,
+      math: { kind: 'add', a, b }
+    });
+  },
+
   add_practice(slot, rng) {
     const carry = slot >= 6;
     let a, b;
@@ -216,6 +262,7 @@ export const additionStages = {
       [a, b] = addPair(rng, ranged(rng, slot, [[5, 7], [6, 10], [8, 10], [10, 10]]), 4);
     }
     const sum = a + b;
+    if (slot === 7) return addCapstone(rng, a, b, null, 'practice:' + a + ':' + b);
     const story = slot === 4;
     const scene = story ? addScene(rng, a, b) : null;
     return Q({

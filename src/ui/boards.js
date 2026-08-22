@@ -223,6 +223,14 @@ export function renderBoard(q) {
       for (let i = 0; i < b.ones; i += 1) ones += '<span class="cube' + (b.removedOnes && i >= b.ones - b.removedOnes ? ' ghost' : '') + '"></span>';
       return frame('<div class="pv-wrap"><div class="pv-col"><small>10の たば</small><div class="rod-row">' + rods + '</div></div><div class="pv-col"><small>ばら</small><div class="cube-row">' + ones + '</div></div></div>');
     }
+    case 'rod-groups': {
+      const rods = n => {
+        let r = '';
+        for (let i = 0; i < n; i += 1) r += '<span class="rod"></span>';
+        return '<div class="rod-row">' + r + '</div>';
+      };
+      return frame('<div class="two-groups"><div class="group"><small>10の たば</small>' + rods(b.left) + '</div><span class="group-op">と</span><div class="group"><small>10の たば</small>' + rods(b.right) + '</div></div>');
+    }
     case 'remove-board':
       return frame('<div class="dot-field arrange-rows">' + tapPieces(b.total, b.icon, sel, 'remove') + '</div>');
     case 'remove-shown': {

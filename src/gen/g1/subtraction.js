@@ -26,6 +26,23 @@ function subScene(rng, a, b) {
   return { text: pick(rng, scenes), icon: item.icon };
 }
 
+// 単元の さいごの1問(8問目)は、場面を自分で しきに して こたえる(FB-03 D方針)
+function subCapstone(rng, a, b, board, key) {
+  const scene = subScene(rng, a, b);
+  return Q({
+    kind: 'equation-build',
+    prompt: scene.text,
+    answer: a - b,
+    board: board || { type: 'remove-shown', total: a, removed: b, icon: scene.icon, countable: true },
+    hint1: 'ふえる おはなしかな、へる おはなしかな。',
+    hint2: 'しきは ' + a + '−' + b + '。のこりも いれよう。',
+    explain: subExplain(a, b) + ' しきでは ' + a + '−' + b + '＝' + (a - b) + ' と かくよ。',
+    story: false,
+    learningKey: key,
+    math: { kind: 'sub', a, b }
+  });
+}
+
 function subExplain(a, b) {
   return a + 'こから ' + b + 'こ へると、のこりは ' + (a - b) + 'こに なるよ。';
 }
@@ -159,6 +176,7 @@ export const subtractionStages = {
   sub_equation(slot, rng) {
     const [a, b, rest] = subPair(rng, ranged(rng, slot, [[4, 6], [5, 8], [7, 10], [9, 10]]));
     const story = slot === 4;
+    if (slot === 7) return subCapstone(rng, a, b, null, 'sub:' + a + ':' + b);
     // おはなしの回は、しきを子どもが自分で作る(FB-03)。ひきざんは a−b の順だけ正解
     if (story) {
       const scene = subScene(rng, a, b);
@@ -196,6 +214,7 @@ export const subtractionStages = {
     let b = randInt(rng, 1, onesA);
     if (a - b === b) b = Math.max(1, b - 1);
     const rest = a - b;
+    if (slot === 7) return subCapstone(rng, a, b, null, 'steens:' + a + ':' + b);
     const story = slot === 4;
     const scene = story ? subScene(rng, a, b) : null;
     return Q({
@@ -254,6 +273,17 @@ export const subtractionStages = {
     const a = randInt(rng, 11, 18);
     const b = randInt(rng, (a % 10) + 1, 9);
     const rest = a - b;
+    if (slot === 7) {
+      let ca = a;
+      let cb = b;
+      let guard = 0;
+      while (ca - cb === cb && guard < 20) {
+        ca = randInt(rng, 11, 18);
+        cb = randInt(rng, (ca % 10) + 1, 9);
+        guard += 1;
+      }
+      return subCapstone(rng, ca, cb, null, 'borrow:' + ca + ':' + cb);
+    }
     const story = slot === 4;
     const item = thing(rng);
     const askStep = slot < 3;
@@ -346,6 +376,7 @@ export const subtractionStages = {
     let b = randInt(rng, 1, ones - 1);
     const a = tens * 10 + ones;
     if (a - b === b) b = Math.max(1, b - 1);
+    if (slot === 7) return subCapstone(rng, a, b, { type: 'place-value', tens, ones, removedOnes: b, countable: true }, 'tens:' + a + ':' + b);
     return Q({
       kind: 'keypad',
       prompt: a + 'から ' + b + 'を ひくと いくつ？',

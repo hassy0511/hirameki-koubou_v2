@@ -230,10 +230,15 @@ export const numberStages = {
 
   // ── 100までの かず: 10のたばと ばら ──
   num_place(slot, rng) {
-    const tens = ranged(rng, slot, [[2, 3], [2, 5], [4, 8], [6, 9]]);
-    const ones = randInt(rng, 1, 9);
-    const answer = tens * 10 + ones;
+    // 指導要領1年は「120程度までの数」。いちばん上の帯で 10〜12たば(100〜120)を出す。
+    // ちょうど何十(ばら0)も よみの対象なので ときどき混ぜる(場面問題は ばらありに固定)
+    const tens = ranged(rng, slot, [[2, 3], [2, 5], [4, 9], [8, 12]]);
     const story = slot === 4;
+    let ones = rng() < 0.2 ? 0 : randInt(rng, 1, 9);
+    if (tens >= 12) ones = 0; // 120を こえない
+    if (story && ones === 0) ones = randInt(rng, 1, 9);
+    if (story && tens >= 12) ones = 0;
+    const answer = tens * 10 + ones;
     const flipped = ones * 10 + tens;
     const misconceptions = [flipped !== answer ? flipped : answer + 10, (tens + 1) * 10 + ones, (tens - 1) * 10 + ones, tens + ones];
     return Q({
@@ -242,7 +247,7 @@ export const numberStages = {
         ? 'トトが 10ぼんずつ たばねた ぼうと、ばらの ぼうを かぞえている。ぜんぶで いくつ？'
         : pick(rng, ['10の たばと ばら。ぜんぶで いくつ？', 'たばと ばらを あわせると いくつ？']),
       answer,
-      options: numberOptions(rng, answer, misconceptions, { min: 10, max: 100 }),
+      options: numberOptions(rng, answer, misconceptions, { min: 10, max: 129 }),
       board: { type: 'place-value', tens, ones, countable: true },
       hint1: '10の たばを かぞえて、10、20、30、と いって みよう。',
       hint2: 'たばの かずの つづきに、ばらを たして いこう。',

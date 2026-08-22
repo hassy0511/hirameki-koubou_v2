@@ -12,7 +12,7 @@ const SEEDS = [11, 202, 3033, 40404, 55055];
 
 for (const lineId of G1.lineOrder) {
   const line = G1.lines[lineId];
-  test('品質契約: ' + lineId + ' 全11ステージ × ' + SEEDS.length + 'seed', () => {
+  test('品質契約: ' + lineId + ' ぜんステージ × ' + SEEDS.length + 'seed', () => {
     line.stages.forEach((stage, stageIndex) => {
       for (const seed of SEEDS) {
         const pack = makePack(lineId, stageIndex, seed);

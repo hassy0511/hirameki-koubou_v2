@@ -30,7 +30,7 @@ export const G1 = {
         { id: 'num_order', name: 'かずの じゅんばん', action: 'ならびの あいた ところを うめる', goal: 'g1.number.order', kinds: ['choice'] },
         { id: 'num_position', name: 'なんばんめ？', action: 'ならんだ なかから ひとつを さす', goal: 'g1.number.ordinal', kinds: ['pick-one'] },
         { id: 'num_teens', name: '20までの かず', action: '10の まとまりと ばらで かぞえる', goal: 'g1.number.to20', kinds: ['keypad'] },
-        { id: 'num_place', name: '100までの かず', action: '10の たばと ばらで かずを よむ', goal: 'g1.number.to100', kinds: ['choice'] },
+        { id: 'num_place', name: 'おおきい かず', action: '10の たばと ばらで かずを よむ', goal: 'g1.number.to100', kinds: ['choice'] },
         { id: 'num_core', name: 'かずの まとめ', action: 'かずの みかたを ぜんぶ つかう', goal: 'g1.number.review', kinds: ['count-tap', 'keypad', 'choice', 'pick-one'], assessment: true, sources: ['num_bond', 'num_order', 'num_position', 'num_teens', 'num_place'], smallAnswerSpace: true, zeroMeaningful: true }
       ]
     },
@@ -43,13 +43,14 @@ export const G1 = {
         { id: 'add_bond', name: 'あと いくつ？', action: 'めあての かずまで いくつか かんがえる', goal: 'g1.add.bond', kinds: ['count-tap', 'keypad'] },
         { id: 'add_combine', name: 'あわせると いくつ？', action: 'ふたつの かずを あわせる', goal: 'g1.add.combine', kinds: ['choice'] },
         { id: 'add_equation', name: 'しきで たしざん', action: 'たしざんの しきに こたえる', goal: 'g1.add.equation', kinds: ['keypad', 'equation-build'] },
-        { id: 'add_check', name: 'たしざんの おさらい', action: 'ここまでの たしざんを たしかめる', goal: 'g1.add.review1', kinds: ['choice', 'count-tap', 'keypad'], assessment: true, sources: ['add_ready', 'add_bond', 'add_combine', 'add_equation'] },
-        { id: 'add_ten_ready', name: '10と いくつ', action: '10の まとまりと ばらを あわせる', goal: 'g1.add.ten_ready', kinds: ['keypad'] },
-        { id: 'add_teens', name: '20までの たしざん', action: 'くりあがりの ない たしざん', goal: 'g1.add.teens', kinds: ['keypad'] },
+        { id: 'add_check', name: 'たしざんの おさらい', action: 'ここまでの たしざんを たしかめる', goal: 'g1.add.review1', kinds: ['choice', 'count-tap', 'keypad', 'equation-build'], assessment: true, sources: ['add_ready', 'add_bond', 'add_combine', 'add_equation'] },
+        { id: 'add_ten_ready', name: '10と いくつ', action: '10の まとまりと ばらを あわせる', goal: 'g1.add.ten_ready', kinds: ['keypad', 'equation-build'] },
+        { id: 'add_teens', name: '20までの たしざん', action: 'くりあがりの ない たしざん', goal: 'g1.add.teens', kinds: ['keypad', 'equation-build'] },
         { id: 'add_three', name: '3つの かずを たす', action: 'ひだりから じゅんに たす', goal: 'g1.add.three', kinds: ['keypad'] },
-        { id: 'add_practice', name: 'たしざん れんしゅう', action: 'いろいろな たしざんに こたえる', goal: 'g1.add.practice', kinds: ['keypad'] },
+        { id: 'add_practice', name: 'たしざん れんしゅう', action: 'いろいろな たしざんに こたえる', goal: 'g1.add.practice', kinds: ['keypad', 'equation-build'] },
         { id: 'add_maketen', name: '10を つくって たす', action: '10の まとまりを つくって たす', goal: 'g1.add.maketen', kinds: ['keypad'] },
-        { id: 'add_core', name: 'たしざんの まとめ', action: 'たしざんを ぜんぶ つかう', goal: 'g1.add.review2', kinds: ['keypad'], assessment: true, sources: ['add_ten_ready', 'add_teens', 'add_three', 'add_practice', 'add_maketen'] }
+        { id: 'add_tens', name: 'なん10の たしざん', action: '10の たばで たす', goal: 'g1.add.tens', kinds: ['keypad', 'equation-build'] },
+        { id: 'add_core', name: 'たしざんの まとめ', action: 'たしざんを ぜんぶ つかう', goal: 'g1.add.review2', kinds: ['keypad'], assessment: true, sources: ['add_tens', 'add_teens', 'add_three', 'add_practice', 'add_maketen'] }
       ]
     },
     subtraction: {
@@ -61,13 +62,13 @@ export const G1 = {
         { id: 'sub_remain', name: 'のこりは いくつ？', action: 'とった のこりを かんがえる', goal: 'g1.sub.remain', kinds: ['remove', 'choice'] },
         { id: 'sub_zero', name: '0の ひきざん', action: 'ぜんぶ とる・とらないを かんがえる', goal: 'g1.sub.zero', kinds: ['choice'], smallAnswerSpace: true, zeroMeaningful: true, answerEcho: true, maxRepeat: 4 },
         { id: 'sub_equation', name: 'しきで ひきざん', action: 'ひきざんの しきに こたえる', goal: 'g1.sub.equation', kinds: ['keypad', 'equation-build'] },
-        { id: 'sub_check', name: 'ひきざんの おさらい', action: 'ここまでの ひきざんを たしかめる', goal: 'g1.sub.review1', kinds: ['keypad', 'remove', 'choice'], assessment: true, sources: ['sub_split', 'sub_remain', 'sub_zero', 'sub_equation'], smallAnswerSpace: true, zeroMeaningful: true, answerEcho: true },
-        { id: 'sub_teens', name: '20までの ひきざん', action: 'ばらから ひいて のこりを だす', goal: 'g1.sub.teens', kinds: ['keypad'] },
+        { id: 'sub_check', name: 'ひきざんの おさらい', action: 'ここまでの ひきざんを たしかめる', goal: 'g1.sub.review1', kinds: ['keypad', 'remove', 'choice', 'equation-build'], assessment: true, sources: ['sub_split', 'sub_remain', 'sub_zero', 'sub_equation'], smallAnswerSpace: true, zeroMeaningful: true, answerEcho: true },
+        { id: 'sub_teens', name: '20までの ひきざん', action: 'ばらから ひいて のこりを だす', goal: 'g1.sub.teens', kinds: ['keypad', 'equation-build'] },
         { id: 'sub_three', name: '3つの かず', action: 'ひだりから じゅんに けいさんする', goal: 'g1.sub.three', kinds: ['keypad'] },
-        { id: 'sub_borrow', name: '10を つかって ひく', action: '10の まとまりから ひく', goal: 'g1.sub.borrow', kinds: ['keypad'] },
+        { id: 'sub_borrow', name: '10を つかって ひく', action: '10の まとまりから ひく', goal: 'g1.sub.borrow', kinds: ['keypad', 'equation-build'] },
         { id: 'sub_line', name: 'かずの せんで ひく', action: 'かずの せんを もどって こたえる', goal: 'g1.sub.line', kinds: ['numberline'] },
-        { id: 'sub_tens', name: '100までの ひきざん', action: '10の たばや ばらを ひく', goal: 'g1.sub.tens', kinds: ['keypad'] },
-        { id: 'sub_core', name: 'ひきざんの まとめ', action: 'ひきざんを ぜんぶ つかう', goal: 'g1.sub.review2', kinds: ['keypad', 'numberline'], assessment: true, sources: ['sub_teens', 'sub_three', 'sub_borrow', 'sub_line', 'sub_tens'] }
+        { id: 'sub_tens', name: '100までの ひきざん', action: '10の たばや ばらを ひく', goal: 'g1.sub.tens', kinds: ['keypad', 'equation-build'] },
+        { id: 'sub_core', name: 'ひきざんの まとめ', action: 'ひきざんを ぜんぶ つかう', goal: 'g1.sub.review2', kinds: ['keypad', 'numberline', 'equation-build'], assessment: true, sources: ['sub_teens', 'sub_three', 'sub_borrow', 'sub_line', 'sub_tens'] }
       ]
     },
     measure: {
