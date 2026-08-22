@@ -2,7 +2,8 @@
 // ここで組んだパックは engine/spec.js の validatePack を通る形でなければならない
 // (通ることは tests/quality-contract.test.mjs が全ステージ×複数seedで保証する)。
 
-import { G1, stageAt } from '../curriculum/g1.js';
+import { COURSES, stageAt } from '../curriculum/courses.js';
+import { G1 } from '../curriculum/g1.js';
 import { seededRng } from '../engine/rng.js';
 import { numberStages } from './g1/number.js';
 import { additionStages } from './g1/addition.js';
@@ -10,8 +11,15 @@ import { subtractionStages } from './g1/subtraction.js';
 import { measureStages } from './g1/measure.js';
 import { shapeStages } from './g1/shape.js';
 import { solveStages } from './g1/solve.js';
+import { g2NumberStages } from './g2/number.js';
+import { g2CalcStages } from './g2/calc.js';
+import { g2MulStages } from './g2/mul.js';
+import { g2MeasureStages } from './g2/measure.js';
+import { g2ShapeStages } from './g2/shape.js';
+import { g2SolveStages } from './g2/solve.js';
 
-const GENERATORS = Object.assign({}, numberStages, additionStages, subtractionStages, measureStages, shapeStages, solveStages);
+const GENERATORS = Object.assign({}, numberStages, additionStages, subtractionStages, measureStages, shapeStages, solveStages,
+  g2NumberStages, g2CalcStages, g2MulStages, g2MeasureStages, g2ShapeStages, g2SolveStages);
 
 // おさらい・まとめ: どのスロットで どの元ステージを出すか。
 // スロット4は必ず場面問題になるよう、元ステージへ slot=4 を渡す。
@@ -32,8 +40,8 @@ function generate(stage, slot, rng) {
   return q;
 }
 
-export function makePack(lineId, stageIndex, seed) {
-  const stage = stageAt(lineId, stageIndex);
+export function makePack(lineId, stageIndex, seed, courseId) {
+  const stage = stageAt(courseId || 'g1', lineId, stageIndex);
   const rng = seededRng(seed);
   const questions = [];
   const seenVisible = new Set();
@@ -88,7 +96,7 @@ export function makePack(lineId, stageIndex, seed) {
     prevKey = chosen.learningKey;
     questions.push(chosen);
   }
-  return { seed, lineId, stageIndex, questions };
+  return { seed, courseId: courseId || 'g1', lineId, stageIndex, questions };
 }
 
-export { G1, stageAt };
+export { G1, COURSES, stageAt };

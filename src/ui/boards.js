@@ -150,6 +150,7 @@ const FACE_SVG = {
 };
 
 import { STICK_FIGURES } from '../gen/g1/shape.js';
+import { POLYS } from '../gen/g2/shape.js';
 
 function stickSvg(figureKey) {
   const figure = STICK_FIGURES.find(f => f.key === figureKey);
@@ -168,6 +169,21 @@ function stickSvg(figureKey) {
     '<line x1="' + (pad + x1 * scale) + '" y1="' + (pad + y1 * scale) + '" x2="' + (pad + x2 * scale) + '" y2="' + (pad + y2 * scale) + '" class="stick"/>'
   ).join('');
   return '<svg class="stick-figure" viewBox="0 0 ' + w + ' ' + hgt + '">' + lines + '</svg>';
+}
+
+// 小2の図形。POLYS の座標から描く。markVertices で頂点に印
+function polySvg(key, markVertices) {
+  const p = POLYS[key];
+  if (!p) return '';
+  if (p.curved) {
+    return '<svg class="poly-svg" viewBox="0 0 100 100"><path d="M50 12 C85 15 92 55 70 80 C50 98 15 85 12 55 C10 28 25 15 50 12 Z" class="poly-shape"/></svg>';
+  }
+  const pts = p.points.map(pt => pt.join(',')).join(' ');
+  const marks = markVertices ? p.points.map(pt => '<circle cx="' + pt[0] + '" cy="' + pt[1] + '" r="4" class="poly-vertex"/>').join('') : '';
+  if (p.open) {
+    return '<svg class="poly-svg" viewBox="0 0 100 100"><polyline points="' + pts + '" class="poly-open"/></svg>';
+  }
+  return '<svg class="poly-svg" viewBox="0 0 100 100"><polygon points="' + pts + '" class="poly-shape"/>' + marks + '</svg>';
 }
 
 function bars(units, max, label) {
@@ -222,6 +238,116 @@ export function renderBoard(q) {
       let ones = '';
       for (let i = 0; i < b.ones; i += 1) ones += '<span class="cube' + (b.removedOnes && i >= b.ones - b.removedOnes ? ' ghost' : '') + '"></span>';
       return frame('<div class="pv-wrap"><div class="pv-col"><small>10の たば</small><div class="rod-row">' + rods + '</div></div><div class="pv-col"><small>ばら</small><div class="cube-row">' + ones + '</div></div></div>');
+    }
+    // ---------- 小2の盤面 ----------
+    case 'place-table': {
+      const cols = [];
+      const push = (label, n, cls) => {
+        if (label === 'せん' && n === 0) return;
+        let tokens = '';
+        for (let i = 0; i < n; i += 1) tokens += '<span class="pv-token ' + cls + '"></span>';
+        cols.push('<div class="pt-col"><small>' + label + '</small><div class="pt-cell">' + (n ? tokens : '<span class="pt-zero">0</span>') + '</div></div>');
+      };
+      push('せん', b.sen || 0, 'tok-sen');
+      push('ひゃく', b.hyaku || 0, 'tok-hyaku');
+      push('じゅう', b.ju || 0, 'tok-ju');
+      push('いち', b.ichi || 0, 'tok-ichi');
+      return frame('<div class="place-table">' + cols.join('') + '</div>');
+    }
+    case 'number-card':
+      return frame('<div class="big-number">' + esc(b.value) + '</div>');
+    case 'compare-pair':
+      return frame('<div class="compare-pair"><div class="cmp-box"><small>あ</small><b>' + esc(b.left) + '</b></div><div class="cmp-box"><small>い</small><b>' + esc(b.right) + '</b></div></div>');
+    case 'numberline-read': {
+      let stops = '';
+      const ticks = Math.round((b.max - b.min) / b.step);
+      for (let i = 0; i <= ticks; i += 1) {
+        const labeled = i === 0 || i === ticks;
+        stops += '<span class="nl-stop"><i></i><b>' + (labeled ? esc(b.min + b.step * i) : '') + '</b>' + (i === b.at ? '<span class="nl-arrow">▲</span>' : '') + '</span>';
+      }
+      return frame('<div class="numberline read">' + stops + '</div>');
+    }
+    case 'frac-tape': {
+      let cells = '';
+      for (let i = 0; i < b.parts; i += 1) cells += '<span class="frac-cell' + (i < b.shaded ? ' on' : '') + '"></span>';
+      return frame('<div class="frac-tape">' + cells + '</div><p class="board-note">おなじ おおきさに わけた テープ</p>');
+    }
+    case 'trays': {
+      const trays = [];
+      for (let g = 0; g < b.groups; g += 1) {
+        let dotsHtml = '';
+        for (let i = 0; i < b.per; i += 1) dotsHtml += dot(b.icon);
+        trays.push('<div class="tray-box">' + dotsHtml + '</div>');
+      }
+      return frame('<div class="tray-row">' + trays.join('') + '</div>');
+    }
+    case 'column-calc': {
+      const w = Math.max(String(b.a).length, String(b.b).length) + 1;
+      const padRow = v => String(v).padStart(w, '　').split('').map(ch => '<span class="col-digit">' + (ch === '　' ? '' : esc(ch)) + '</span>').join('');
+      return frame('<div class="column-calc"><div class="col-row">' + padRow(b.a) + '</div>' +
+        '<div class="col-row op-row"><span class="col-op">' + (b.hideOp ? '？' : esc(b.op)) + '</span>' + padRow(b.b) + '</div>' +
+        '<div class="col-line"></div><div class="col-row answer-row"><span class="col-q">？</span></div></div>');
+    }
+    case 'array-grid': {
+      let rows = '';
+      for (let r = 0; r < b.rows; r += 1) {
+        let cells = '';
+        for (let c = 0; c < b.cols; c += 1) cells += '<span class="arr-dot' + (b.splitAt != null && c >= b.splitAt ? ' alt' : '') + '"></span>';
+        rows += '<div class="arr-row">' + cells + '</div>';
+      }
+      return frame('<div class="array-grid">' + rows + '</div>');
+    }
+    case 'ruler-cm': {
+      const max = b.max || 15;
+      let ticks = '';
+      for (let i = 0; i <= max; i += 1) {
+        ticks += '<span class="cm-tick"><i></i><b>' + i + '</b></span>';
+      }
+      return frame('<div class="ruler-cm-wrap"><span class="obj-bar obj-' + esc(b.objectKey || 'tape') + '" style="width:' + (b.length / max * 100) + '%"></span>' +
+        '<div class="ruler-cm">' + ticks + '</div></div><p class="board-note">0に はしを そろえて ある</p>');
+    }
+    case 'tank': {
+      let big = '';
+      for (let i = 0; i < (b.l || 0); i += 1) big += '<span class="tank-l"><small>1L</small></span>';
+      let cups = '';
+      for (let i = 0; i < (b.dl || 0); i += 1) cups += '<span class="tank-dl' + (b.removedDl && i >= b.dl - b.removedDl ? ' ghost' : '') + '"></span>';
+      return frame('<div class="tank-row">' + big + '<div class="tank-dls">' + cups + '</div></div><p class="board-note">' + ((b.l || 0) > 0 ? '1Lの ますと 1dLの ます' : '1dLの ます') + '</p>');
+    }
+    case 'clock-span':
+      return frame('<div class="clock-pair"><div class="clock-cell"><small>はじめ</small>' + clockSvg(b.startH, b.startM, 120) + '</div><span class="clock-arrow">→</span><div class="clock-cell"><small>おわり</small>' + clockSvg(b.endH, b.endM, 120) + '</div></div>');
+    case 'poly':
+      return frame('<div class="poly-single">' + polySvg(b.item, b.markVertices) + '</div>');
+    case 'poly-set': {
+      const cells = b.items.map((key, i) =>
+        '<div class="poly-cell"><small>' + esc(b.labels[i]) + '</small>' + polySvg(key) + '</div>').join('');
+      return frame('<div class="poly-set">' + cells + '</div>');
+    }
+    case 'tally-marks': {
+      const groups = Math.floor(b.count / 5);
+      const rest = b.count % 5;
+      let html = '';
+      for (let g = 0; g < groups; g += 1) html += '<span class="tally-group">' + '<i></i>'.repeat(5) + '</span>';
+      if (rest) html += '<span class="tally-group">' + '<i></i>'.repeat(rest) + '</span>';
+      return frame('<div class="tally-wrap"><small>' + esc(b.label) + '</small><div class="tally-row">' + html + '</div></div>');
+    }
+    case 'table-1d': {
+      const head = b.rows.map(r => '<th>' + esc(r.label) + '</th>').join('');
+      const vals = b.rows.map(r => '<td>' + r.count + '</td>').join('');
+      return frame('<table class="data-table"><tr><th>しゅるい</th>' + head + '</tr><tr><th>かず</th>' + vals + '</tr></table>');
+    }
+    case 'tape-2': {
+      // 未知の部分は 値に比例させず、見やすい幅で描く(つぶれると 図の意味が失われる)
+      const knownMax = Math.max(...b.parts.map(part => part.value == null ? 0 : part.value), 1);
+      const partHtml = b.parts.map(part => {
+        const flexValue = part.value == null ? Math.max(2, Math.round(knownMax * 0.75)) : Math.max(part.value, 2);
+        return '<span class="tape-part' + (part.value == null ? ' unknown' : '') + '" style="flex:' + flexValue + '">' + esc(part.label) + (part.value == null ? '<b>？</b>' : '') + '</span>';
+      }).join('');
+      return frame('<div class="tape-diagram"><div class="tape-top' + (b.top.value == null ? ' unknown' : '') + '">' + esc(b.top.label) + (b.top.value == null ? '<b>？</b>' : '') + '</div><div class="tape-parts">' + partHtml + '</div></div>');
+    }
+    case 'times-tape': {
+      let copies = '';
+      for (let i = 0; i < b.times; i += 1) copies += '<span class="times-unit"></span>';
+      return frame('<div class="times-tape"><div class="tt-row"><small>もと</small><span class="times-unit base"></span></div><div class="tt-row"><small>ばい</small>' + copies + '</div></div>');
     }
     case 'rod-groups': {
       const rods = n => {

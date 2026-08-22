@@ -5,9 +5,9 @@
 //   えらぶ・タップする・うごかす → 「けってい」で確定。とちゅうで やりなおせる。
 // まちがえたら: 1回目はヒント、2回目はこたえの説明を見て つぎへ。
 
-import { G1, makePack } from '../gen/index.js';
+import { COURSES, makePack } from '../gen/index.js';
 import { validatePack } from '../engine/spec.js';
-import { stageAt } from '../curriculum/g1.js';
+import { stageAt } from '../curriculum/courses.js';
 import { iconSvg, renderBoard } from './boards.js';
 
 const STORE_KEY = 'hirameki-v2';
@@ -23,10 +23,11 @@ function load() {
     if (raw && raw.version === 1) {
       if (!raw.flags) raw.flags = { intro: false, lines: {} };
       if (!raw.flags.lines) raw.flags.lines = {};
+      if (!COURSES[raw.course]) raw.course = 'g1';
       return raw;
     }
   } catch (err) { /* こわれた保存は作り直す */ }
-  return { version: 1, progress: {}, plays: 0, flags: { intro: false, lines: {} } };
+  return { version: 1, progress: {}, plays: 0, course: 'g1', flags: { intro: false, lines: {} } };
 }
 
 function save() {
@@ -37,6 +38,10 @@ function esc(value) {
   return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
+function currentCourse() {
+  return COURSES[state.course || 'g1'];
+}
+
 function progressOf(stageId) {
   return state.progress[stageId] || null;
 }
@@ -44,13 +49,13 @@ function progressOf(stageId) {
 function isUnlocked(lineId, stageIndex) {
   if (state.flags.admin) return true; // 管理者モード: 全ステージ解放
   if (stageIndex <= 0) return true;
-  const prev = G1.lines[lineId].stages[stageIndex - 1];
+  const prev = currentCourse().lines[lineId].stages[stageIndex - 1];
   const p = progressOf(prev.id);
   return Boolean(p && p.cleared);
 }
 
 function clearedCount(lineId) {
-  return G1.lines[lineId].stages.filter(s => progressOf(s.id) && progressOf(s.id).cleared).length;
+  return currentCourse().lines[lineId].stages.filter(s => progressOf(s.id) && progressOf(s.id).cleared).length;
 }
 
 // ---------- 画面 ----------
@@ -92,29 +97,50 @@ function introScreen() {
 
 // 各そうち(ライン)の はじめての 1まい。「なにが こわれて、なにを すれば なおるか」だけを いう。
 const LINE_INTROS = {
-  number: 'かずの けいじばんの あかりが きえて、かずが よめなく なった。かぞえて こたえて、あかりを もどそう。',
-  addition: 'あわせる そうちの うでが とまって いる。あわせる けいさんで、うでを うごかそう。',
-  subtraction: 'わける そうちの でぐちが つまって いる。とる・わける けいさんで、ながれを もどそう。',
-  measure: 'はかる だいの めもりが くるって いる。ならべて くらべて、めもりを なおそう。',
-  shape: 'かたちの つくえが ちらかって しまった。かたちを みわけて、もとに もどそう。',
-  solve: 'しらべる つくえの きろくが きえた。ならべて かぞえて、きろくを つくりなおそう。'
+  g1: {
+    number: 'かずの けいじばんの あかりが きえて、かずが よめなく なった。かぞえて こたえて、あかりを もどそう。',
+    addition: 'あわせる そうちの うでが とまって いる。あわせる けいさんで、うでを うごかそう。',
+    subtraction: 'わける そうちの でぐちが つまって いる。とる・わける けいさんで、ながれを もどそう。',
+    measure: 'はかる だいの めもりが くるって いる。ならべて くらべて、めもりを なおそう。',
+    shape: 'かたちの つくえが ちらかって しまった。かたちを みわけて、もとに もどそう。',
+    solve: 'しらべる つくえの きろくが きえた。ならべて かぞえて、きろくを つくりなおそう。'
+  },
+  g2: {
+    number: 'けいじばんが おおきな かずに たえられなく なった。1000や 10000の へやを つくって なおそう。',
+    calc: 'ひっさんの そうちの レーンが ずれて いる。くらいを そろえて、くりあがり・くりさがりを なおそう。',
+    mul: 'あたらしい ぞうふくの そうちが ねむって いる。かけざんと くくで めを さまそう。',
+    measure: 'はかる だいに cmや Lの めもりが ふえた。あたらしい たんいで はかれるように しよう。',
+    shape: 'せっけいずが やぶれて しまった。へん・ちょうてん・ちょっかくで かきなおそう。',
+    solve: 'しらべる つくえに あたらしい きろくばんが ついた。ひょうと テープずで といて いこう。'
+  }
 };
 
 const LINE_ICONS = {
   number: 'device-number',
   addition: 'device-addition',
   subtraction: 'device-subtraction',
+  calc: 'device-addition',
+  mul: 'device-subtraction',
   measure: 'device-measure',
   shape: 'device-shape',
   solve: 'device-solve'
 };
 
+function lineIntroKey(lineId) {
+  return state.course + ':' + lineId;
+}
+
+function lineIntroSeen(lineId) {
+  if (state.flags.lines[lineIntroKey(lineId)]) return true;
+  return state.course === 'g1' && Boolean(state.flags.lines[lineId]); // ふるい保存かたち
+}
+
 function lineIntroScreen(lineId) {
   session = null;
-  const line = G1.lines[lineId];
+  const line = currentCourse().lines[lineId];
   show(
     '<header class="bar line-' + lineId + '"><button type="button" class="back" data-home>← もどる</button><h1>' + esc(line.name) + '</h1><span class="bar-side">' + esc(line.device) + '</span></header>' +
-    '<main class="intro"><div class="intro-card"><p>' + esc(LINE_INTROS[lineId] || '') + '</p></div>' +
+    '<main class="intro"><div class="intro-card"><p>' + esc((LINE_INTROS[state.course] || {})[lineId] || '') + '</p></div>' +
     '<button type="button" class="commit" data-line-go="' + lineId + '">なおしに いく</button>' +
     '</main>'
   );
@@ -122,8 +148,12 @@ function lineIntroScreen(lineId) {
 
 function homeScreen() {
   session = null;
-  const lines = G1.lineOrder.map(lineId => {
-    const line = G1.lines[lineId];
+  const course = currentCourse();
+  const courseTabs = Object.values(COURSES).map(c =>
+    '<button type="button" class="course-tab' + (c.id === course.id ? ' active' : '') + '" data-course="' + c.id + '">' + esc(c.name) + '</button>'
+  ).join('');
+  const lines = course.lineOrder.map(lineId => {
+    const line = course.lines[lineId];
     const done = clearedCount(lineId);
     return '<button type="button" class="line-card line-' + lineId + '" data-line="' + lineId + '">' +
       '<span class="line-icon" role="img" aria-label="' + esc(line.device) + '">' + iconSvg(LINE_ICONS[lineId]) + '</span>' +
@@ -140,6 +170,7 @@ function homeScreen() {
     '</header>' +
     '<main class="home">' +
     (state.flags.admin ? '<p class="admin-note">かんりしゃモード(全ステージ かいほう) <button type="button" class="soft small" data-admin-off>もどす</button></p>' : '') +
+    '<div class="course-tabs">' + courseTabs + '</div>' +
     '<h2>どの そうちを うごかす？</h2>' +
     '<div class="line-grid">' + lines + '</div>' +
     '<p class="small-note">きろくは この たんまつの なかにだけ のこるよ。</p>' +
@@ -149,7 +180,7 @@ function homeScreen() {
 
 function stageListScreen(lineId) {
   listLine = lineId;
-  const line = G1.lines[lineId];
+  const line = currentCourse().lines[lineId];
   const cards = line.stages.map((stage, i) => {
     const p = progressOf(stage.id);
     const unlocked = isUnlocked(lineId, i);
@@ -171,12 +202,12 @@ function stageListScreen(lineId) {
 // ---------- 出題 ----------
 
 function startStage(lineId, stageIndex, seed) {
-  const stage = stageAt(lineId, stageIndex);
+  const stage = stageAt(state.course, lineId, stageIndex);
   const useSeed = seed == null ? ((Date.now() ^ (state.plays * 2654435761)) >>> 0) : seed;
-  let pack = makePack(lineId, stageIndex, useSeed);
+  let pack = makePack(lineId, stageIndex, useSeed, state.course);
   // 契約に落ちるパックは世に出さない(まず起きないが、起きたら別seedで作り直す)
   for (let retry = 0; retry < 4 && validatePack(pack, stage, 'runtime').length > 0; retry += 1) {
-    pack = makePack(lineId, stageIndex, useSeed + retry + 1);
+    pack = makePack(lineId, stageIndex, useSeed + retry + 1, state.course);
   }
   state.plays += 1;
   save();
@@ -222,7 +253,7 @@ function kindLabel(kind) {
 
 function renderPlay() {
   const q = currentQuestion();
-  const line = G1.lines[session.lineId];
+  const line = currentCourse().lines[session.lineId];
   const dotsNav = session.pack.questions.map((_, i) =>
     '<span class="qdot' + (i < session.at ? ' done' : i === session.at ? ' now' : '') + '"></span>').join('');
   show(
@@ -263,13 +294,12 @@ function renderAnswer(q) {
     // 候補は画面に出さない。文章から数と演算を子どもが取り出す(FB-03)
     const keys = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(k => '<button type="button" class="key" data-key="' + k + '">' + k + '</button>').join('');
     if (ui.eqStep === 'expr') {
-      const ready = /^\d+[＋−]\d+$/.test(ui.expr);
+      const ready = /^\d+[＋−×]\d+$/.test(ui.expr);
+      const opKeys = (q.ops || ['＋', '−']).map(op => '<button type="button" class="key op" data-op="' + op + '">' + op + '</button>').join('');
       return '<div class="keypad-wrap">' +
         '<p class="eq-step">しきを つくろう</p>' +
         '<div class="key-display eq">' + (ui.expr === '' ? '<span class="ghost">しき</span>' : esc(ui.expr)) + '</div>' +
-        '<div class="keypad">' + keys +
-        '<button type="button" class="key op" data-op="＋">＋</button>' +
-        '<button type="button" class="key op" data-op="−">−</button>' +
+        '<div class="keypad">' + keys + opKeys +
         '<button type="button" class="key erase" data-erase>けす</button></div></div>' + commitRow(ready, true);
     }
     return '<div class="keypad-wrap">' +
@@ -337,7 +367,7 @@ function collectedAnswer(q) {
 function commit() {
   const q = currentQuestion();
   if (q.kind === 'equation-build' && q.ui.eqStep === 'expr') {
-    const m = q.ui.expr.match(/^(\d+)([＋−])(\d+)$/);
+    const m = q.ui.expr.match(/^(\d+)([＋−×])(\d+)$/);
     const math = q.math;
     let ok = false;
     let reversedSub = false;
@@ -347,6 +377,8 @@ function commit() {
       const op = m[2];
       if (math.kind === 'add') {
         ok = op === '＋' && ((x === math.a && y === math.b) || (x === math.b && y === math.a));
+      } else if (math.kind === 'mul') {
+        ok = op === '×' && ((x === math.a && y === math.b) || (x === math.b && y === math.a));
       } else {
         ok = op === '−' && x === math.a && y === math.b;
         reversedSub = op === '−' && x === math.b && y === math.a;
@@ -414,7 +446,7 @@ function finishStage() {
   };
   save();
   const nextIndex = session.stageIndex + 1;
-  const line = G1.lines[session.lineId];
+  const line = currentCourse().lines[session.lineId];
   const hasNext = nextIndex < line.stages.length;
   const repairLabel = line.device + 'が うごきだす ところ';
   show(
@@ -451,14 +483,20 @@ root.addEventListener('click', event => {
     else introScreen();
     return;
   }
+  if (t.dataset.course) {
+    state.course = t.dataset.course;
+    save();
+    homeScreen();
+    return;
+  }
   if (t.dataset.lineGo) {
-    state.flags.lines[t.dataset.lineGo] = true;
+    state.flags.lines[lineIntroKey(t.dataset.lineGo)] = true;
     save();
     stageListScreen(t.dataset.lineGo);
     return;
   }
   if (t.dataset.line) {
-    if (!state.flags.lines[t.dataset.line]) lineIntroScreen(t.dataset.line);
+    if (!lineIntroSeen(t.dataset.line)) lineIntroScreen(t.dataset.line);
     else stageListScreen(t.dataset.line);
     return;
   }
@@ -484,8 +522,8 @@ root.addEventListener('click', event => {
   if (t.dataset.key != null) {
     if (q.kind === 'equation-build' && q.ui.eqStep === 'expr') {
       const lastNumber = q.ui.expr.match(/(\d*)$/)[1];
-      if (lastNumber.length < 2 && q.ui.expr.length < 5) q.ui.expr += t.dataset.key;
-    } else if (q.ui.input.length < 3) {
+      if (lastNumber.length < 3 && q.ui.expr.length < 7) q.ui.expr += t.dataset.key;
+    } else if (q.ui.input.length < 5) {
       q.ui.input += t.dataset.key;
     }
     renderPlay();
@@ -543,8 +581,12 @@ function currentListLine() { return listLine; }
 
 window.__hirameki = {
   state,
-  G1,
-  open(lineId, stageIndex, seed) { startStage(lineId, stageIndex, seed); },
+  COURSES,
+  get G1() { return COURSES.g1; },
+  open(lineId, stageIndex, seed, courseId) {
+    if (courseId && COURSES[courseId]) { state.course = courseId; }
+    startStage(lineId, stageIndex, seed);
+  },
   question() { return session ? currentQuestion() : null; },
   session() { return session; },
   autoAnswer() {
@@ -553,7 +595,7 @@ window.__hirameki = {
     if (q.ui.feedback) { nextQuestion(); return; }
     if (q.kind === 'equation-build') {
       q.ui.eqStep = 'expr';
-      q.ui.expr = String(q.math.a) + (q.math.kind === 'add' ? '＋' : '−') + q.math.b;
+      q.ui.expr = String(q.math.a) + (q.math.kind === 'add' ? '＋' : q.math.kind === 'mul' ? '×' : '−') + q.math.b;
       commit();
       if (!q.ui.feedback && q.askAnswer !== false) { q.ui.input = String(q.answer); commit(); }
       return;

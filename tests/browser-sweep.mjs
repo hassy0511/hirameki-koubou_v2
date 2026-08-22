@@ -16,18 +16,19 @@ page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE: ' + m.text()); });
 
 await page.goto(BASE + '/index.html', { waitUntil: 'networkidle' });
-const lineOrder = await page.evaluate(() => window.__hirameki.G1.lineOrder);
-const stageCounts = await page.evaluate(() => Object.fromEntries(
-  window.__hirameki.G1.lineOrder.map(l => [l, window.__hirameki.G1.lines[l].stages.length])
-));
+const coursePlan = await page.evaluate(() => Object.values(window.__hirameki.COURSES).map(c => ({
+  id: c.id,
+  lines: c.lineOrder.map(l => ({ lineId: l, count: c.lines[l].stages.length }))
+})));
 
 let stagesChecked = 0;
 let questionsChecked = 0;
 const problems = [];
 
-for (const lineId of lineOrder) {
-  for (let si = 0; si < stageCounts[lineId]; si += 1) {
-    await page.evaluate(([l, s]) => window.__hirameki.open(l, s, 24680), [lineId, si]);
+for (const course of coursePlan) {
+  for (const { lineId, count } of course.lines) {
+  for (let si = 0; si < count; si += 1) {
+    await page.evaluate(([c, l, s]) => window.__hirameki.open(l, s, 24680, c), [course.id, lineId, si]);
     for (let q = 0; q < 8; q += 1) {
       const info = await page.evaluate(() => {
         const question = window.__hirameki.question();
@@ -56,20 +57,21 @@ for (const lineId of lineOrder) {
           boardOverflow
         };
       });
-      if (!info.promptDrawn) problems.push(lineId + '/' + si + ' q' + (q + 1) + ': 問題文が表示されていない');
-      if (info.hasBoard && !info.boardDrawn) problems.push(lineId + '/' + si + ' q' + (q + 1) + ' [' + info.kind + ']: 盤面が表示されていない');
-      if (!info.commitDrawn) problems.push(lineId + '/' + si + ' q' + (q + 1) + ': けっていボタンが無い');
-      if (info.pageOverflow > 1) problems.push(lineId + '/' + si + ' q' + (q + 1) + ' [' + info.kind + ']: 画面から横に ' + info.pageOverflow + 'px はみ出す');
-      if (info.boardOverflow > 2) problems.push(lineId + '/' + si + ' q' + (q + 1) + ' [' + info.kind + ']: 盤面の中身が ' + info.boardOverflow + 'px 切れている');
+      if (!info.promptDrawn) problems.push(course.id + '/' + lineId + '/' + si + ' q' + (q + 1) + ': 問題文が表示されていない');
+      if (info.hasBoard && !info.boardDrawn) problems.push(course.id + '/' + lineId + '/' + si + ' q' + (q + 1) + ' [' + info.kind + ']: 盤面が表示されていない');
+      if (!info.commitDrawn) problems.push(course.id + '/' + lineId + '/' + si + ' q' + (q + 1) + ': けっていボタンが無い');
+      if (info.pageOverflow > 1) problems.push(course.id + '/' + lineId + '/' + si + ' q' + (q + 1) + ' [' + info.kind + ']: 画面から横に ' + info.pageOverflow + 'px はみ出す');
+      if (info.boardOverflow > 2) problems.push(course.id + '/' + lineId + '/' + si + ' q' + (q + 1) + ' [' + info.kind + ']: 盤面の中身が ' + info.boardOverflow + 'px 切れている');
       questionsChecked += 1;
       await page.evaluate(() => window.__hirameki.autoAnswer()); // 正解を流し込み commit
       const good = await page.evaluate(() => Boolean(document.querySelector('.feedback.good')));
-      if (!good) problems.push(lineId + '/' + si + ' q' + (q + 1) + ' [' + info.kind + ']: 正解を入れたのに せいかいに ならない');
+      if (!good) problems.push(course.id + '/' + lineId + '/' + si + ' q' + (q + 1) + ' [' + info.kind + ']: 正解を入れたのに せいかいに ならない');
       await page.evaluate(() => window.__hirameki.autoAnswer()); // feedback中は next に相当
     }
     const finished = await page.evaluate(() => Boolean(document.querySelector('.result')));
-    if (!finished) problems.push(lineId + '/' + si + ': 8問おわっても 結果画面に ならない');
+    if (!finished) problems.push(course.id + '/' + lineId + '/' + si + ': 8問おわっても 結果画面に ならない');
     stagesChecked += 1;
+  }
   }
 }
 

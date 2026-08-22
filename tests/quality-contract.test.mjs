@@ -1,27 +1,51 @@
 // 出題の品質契約テスト。
-// 全66ステージ × 複数seed の実際の生成問題が、engine/spec.js の契約を満たすことを保証する。
+// 全コース・全ステージ × 複数seed の実際の生成問題が、engine/spec.js の契約を満たすことを保証する。
 // このテストが通らない実装は、どれだけ動いて見えても出荷しない。
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { G1, makePack } from '../src/gen/index.js';
-import { stageAt } from '../src/curriculum/g1.js';
+import { G1, COURSES, makePack } from '../src/gen/index.js';
 import { validatePack } from '../src/engine/spec.js';
 
 const SEEDS = [11, 202, 3033, 40404, 55055];
 
-for (const lineId of G1.lineOrder) {
-  const line = G1.lines[lineId];
-  test('品質契約: ' + lineId + ' ぜんステージ × ' + SEEDS.length + 'seed', () => {
-    line.stages.forEach((stage, stageIndex) => {
-      for (const seed of SEEDS) {
-        const pack = makePack(lineId, stageIndex, seed);
-        const errors = validatePack(pack, stage, lineId + '/' + stage.id + ' seed' + seed);
-        assert.deepEqual(errors, [], errors.slice(0, 5).join('\n'));
-      }
+for (const course of Object.values(COURSES)) {
+  for (const lineId of course.lineOrder) {
+    const line = course.lines[lineId];
+    test('品質契約: ' + course.id + '/' + lineId + ' ぜんステージ × ' + SEEDS.length + 'seed', () => {
+      line.stages.forEach((stage, stageIndex) => {
+        for (const seed of SEEDS) {
+          const pack = makePack(lineId, stageIndex, seed, course.id);
+          const errors = validatePack(pack, stage, course.id + '/' + stage.id + ' seed' + seed);
+          assert.deepEqual(errors, [], errors.slice(0, 5).join('\n'));
+        }
+      });
     });
-  });
+  }
 }
+
+test('小2: 同じseedからは同じ問題が出る', () => {
+  for (const lineId of COURSES.g2.lineOrder) {
+    for (const stageIndex of [0, 4, 7, 10]) {
+      const a = makePack(lineId, stageIndex, 777, 'g2');
+      const b = makePack(lineId, stageIndex, 777, 'g2');
+      assert.deepEqual(a, b, 'g2/' + lineId + '/' + stageIndex + ': 再現しない');
+    }
+  }
+});
+
+test('小2: 遊びなおすと 文もなかみも 変わる', () => {
+  for (const lineId of COURSES.g2.lineOrder) {
+    for (const stageIndex of [0, 2, 6]) {
+      const faces = new Set();
+      for (let i = 0; i < 8; i += 1) {
+        const pack = makePack(lineId, stageIndex, 900 + i * 131, 'g2');
+        pack.questions.forEach(q => faces.add(JSON.stringify([q.prompt, q.board])));
+      }
+      assert.ok(faces.size >= 12, 'g2/' + lineId + '/' + stageIndex + ': 8回遊んで見た目が' + faces.size + '種類しかない');
+    }
+  }
+});
 
 test('同じseedからは同じ問題が出る', () => {
   for (const lineId of G1.lineOrder) {
