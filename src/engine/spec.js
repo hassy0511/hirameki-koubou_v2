@@ -16,7 +16,7 @@ export const KINDS = Object.freeze([
 ]);
 
 // 小1の画面に出してよい文字。漢字は一切出さない(ヒント・解説も同じ)。
-const G1_TEXT = /^[ぁ-んァ-ンヴー0-9 　。、「」？！・＋−＝×cmdL:じふんぷはい]*$/;
+const G1_TEXT = /^[ぁ-んァ-ンヴー0-9 　。、「」？！・＋−＝×÷.cmdLkgt:じふんぷはい]*$/;
 const KANJI = /[一-鿿]/;
 
 // 動詞と操作の対応。問題文がこう言ったら、操作はこれでなければならない。
@@ -30,7 +30,8 @@ const VERB_RULES = [
 ];
 
 function bareNumber(value) {
-  return new RegExp('(^|[^0-9])' + String(value) + '([^0-9]|$)');
+  const escaped = String(value).replace(/\./g, '\\.');
+  return new RegExp('(^|[^0-9.])' + escaped + '([^0-9.]|$)');
 }
 
 function isPureEquation(text) {
@@ -130,20 +131,24 @@ export function validateQuestion(q, stage, label) {
   }
   if (q.kind === 'keypad') {
     if (numericAnswer === null) err('数字入力なのに答えが数でない');
-    const cap = stage.bigNumbers ? 10000 : 120;
+    const cap = stage.numberCap || (stage.bigNumbers ? 10000 : 120);
     if (numericAnswer > cap) err('学年の入力範囲を超える答え: ' + q.answer + '(上限' + cap + ')');
   }
   if (q.kind === 'equation-build') {
     // 式づくり: 文章から数と演算を子どもが取り出す課題。
     // 採点は math の {kind, a, b} が根拠。たし算・かけ算は順不同で正解にする。
     const m = q.math || {};
-    if (m.kind !== 'add' && m.kind !== 'sub' && m.kind !== 'mul') err('式づくりなのに math.kind が add/sub/mul でない');
+    if (!['add', 'sub', 'mul', 'div'].includes(m.kind)) err('式づくりなのに math.kind が add/sub/mul/div でない');
     if (!Number.isFinite(m.a) || !Number.isFinite(m.b)) err('式づくりの a, b が数でない');
     const maxOperand = stage.bigNumbers ? 999 : 99;
     if (m.a < 1 || m.b < 1 || m.a > maxOperand || m.b > maxOperand) err('式づくりの数が範囲外: ' + m.a + ',' + m.b);
-    if (m.kind === 'mul' && (m.a > 12 || m.b > 12)) err('かけ算の範囲(12まで)を超える: ' + m.a + '×' + m.b);
+    if (m.kind === 'mul' && !stage.bigNumbers && (m.a > 12 || m.b > 12)) err('かけ算の範囲(12まで)を超える: ' + m.a + '×' + m.b);
     if (m.kind === 'sub' && !(m.a > m.b)) err('引き算なのに a>b でない: ' + m.a + '−' + m.b);
-    const expect = m.kind === 'add' ? m.a + m.b : m.kind === 'sub' ? m.a - m.b : m.a * m.b;
+    if (m.kind === 'div') {
+      if (m.b > 9) err('わり算のわる数が9を超える: ' + m.b);
+      if (m.a % m.b !== 0) err('わり切れないわり算: ' + m.a + '÷' + m.b);
+    }
+    const expect = m.kind === 'add' ? m.a + m.b : m.kind === 'sub' ? m.a - m.b : m.kind === 'mul' ? m.a * m.b : m.a / m.b;
     if (numericAnswer !== expect) err('式づくりの答えが式と合わない: ' + q.answer + ' ≠ ' + expect);
     // 数は必ず文章の中にある(画面にない情報で採点しない、の原則)
     if (!bareNumber(m.a).test(q.prompt)) err('式に使う数 ' + m.a + ' が文章に無い: ' + q.prompt);

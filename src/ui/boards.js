@@ -263,7 +263,8 @@ export function renderBoard(q) {
       const ticks = Math.round((b.max - b.min) / b.step);
       for (let i = 0; i <= ticks; i += 1) {
         const labeled = i === 0 || i === ticks;
-        stops += '<span class="nl-stop"><i></i><b>' + (labeled ? esc(b.min + b.step * i) : '') + '</b>' + (i === b.at ? '<span class="nl-arrow">▲</span>' : '') + '</span>';
+        const tick = b.step < 1 ? (b.min + b.step * i).toFixed(1) : b.min + b.step * i;
+        stops += '<span class="nl-stop"><i></i><b>' + (labeled ? esc(tick) : '') + '</b>' + (i === b.at ? '<span class="nl-arrow">▲</span>' : '') + '</span>';
       }
       return frame('<div class="numberline read">' + stops + '</div>');
     }
@@ -348,6 +349,60 @@ export function renderBoard(q) {
       let copies = '';
       for (let i = 0; i < b.times; i += 1) copies += '<span class="times-unit"></span>';
       return frame('<div class="times-tape"><div class="tt-row"><small>もと</small><span class="times-unit base"></span></div><div class="tt-row"><small>ばい</small>' + copies + '</div></div>');
+    }
+    // ---------- 小3の盤面 ----------
+    case 'abacus': {
+      // そろばん: 5だま1つ+1だま4つ。value の各けたを 珠の位置で示す
+      const digits = String(b.value).split('').map(Number);
+      // 珠は「はりに よせる」ことで数を表す。5だまは 下げる、1だまは 上げる
+      const rods = digits.map(d => {
+        const five = d >= 5;
+        const ones = d % 5;
+        const onBeads = Array.from({ length: ones }, () => '<span class="ab-bead on"></span>').join('');
+        const offBeads = Array.from({ length: 4 - ones }, () => '<span class="ab-bead"></span>').join('');
+        return '<div class="ab-rod">' +
+          '<div class="ab-upper">' + (five ? '<span class="ab-space"></span><span class="ab-bead on"></span>' : '<span class="ab-bead"></span><span class="ab-space"></span>') + '</div>' +
+          '<span class="ab-bar"></span>' +
+          '<div class="ab-lower">' + onBeads + (ones < 4 ? '<span class="ab-space"></span>' : '') + offBeads + '</div>' +
+          '</div>';
+      }).join('');
+      return frame('<div class="abacus">' + rods + '</div><p class="board-note">うえの 5だまは さげると 5</p>');
+    }
+    case 'circle': {
+      const lines = b.show === 'diameter'
+        ? '<line x1="14" y1="60" x2="106" y2="60" class="circ-line"/><text x="60" y="52" text-anchor="middle" class="circ-label">ちょっけい</text>'
+        : '<line x1="60" y1="60" x2="106" y2="60" class="circ-line"/><text x="83" y="52" text-anchor="middle" class="circ-label">はんけい</text>';
+      return frame('<svg class="circle-svg" viewBox="0 0 120 120"><circle cx="60" cy="60" r="46" class="circ-shape"/><circle cx="60" cy="60" r="3.5" class="circ-center"/>' + (b.show === 'plain' ? '' : lines) + '</svg>');
+    }
+    case 'circle-pattern': {
+      let circles = '';
+      for (let i = 0; i < b.count; i += 1) {
+        circles += '<circle cx="' + (34 + i * 26) + '" cy="40" r="24" class="circ-shape thin"/>';
+      }
+      return frame('<svg class="circle-svg wide" viewBox="0 0 ' + (68 + (b.count - 1) * 26) + ' 80">' + circles + '</svg><p class="board-note">おなじ はんけいの えん</p>');
+    }
+    case 'sphere-cut':
+      return frame('<svg class="circle-svg" viewBox="0 0 120 120"><circle cx="60" cy="60" r="46" class="sphere-shape"/><ellipse cx="60" cy="60" rx="46" ry="14" class="sphere-line"/><line x1="10" y1="' + (b.cutY || 60) + '" x2="110" y2="' + (b.cutY || 60) + '" class="cut-line"/></svg><p class="board-note">てんせんで きる</p>');
+    case 'angle-pair': {
+      const wedge = deg => {
+        const rad = (180 - deg) * Math.PI / 180;
+        const x = 10 + 80 * Math.cos(rad) * -1;
+        const y = 90 - 80 * Math.sin(rad);
+        return '<svg class="angle-svg" viewBox="0 0 100 100"><path d="M10 90 L90 90 L' + x.toFixed(1) + ' ' + y.toFixed(1) + '" class="angle-arm"/><path d="M30 90 A20 20 0 0 0 ' + (10 + 20 * Math.cos(rad) * -1).toFixed(1) + ' ' + (90 - 20 * Math.sin(rad)).toFixed(1) + '" class="angle-arc"/></svg>';
+      };
+      return frame('<div class="poly-set"><div class="poly-cell"><small>あ</small>' + wedge(b.a) + '</div><div class="poly-cell"><small>い</small>' + wedge(b.bDeg) + '</div></div>');
+    }
+    case 'bar-graph': {
+      const maxVal = Math.max(...b.columns.map(c => c.count));
+      const rows = Math.ceil(maxVal / b.step);
+      const cols = b.columns.map(c => {
+        let cells = '';
+        for (let i = 0; i < rows; i += 1) cells += '<span class="bar-cell' + (i * b.step < c.count ? ' on' : '') + '"></span>';
+        return '<div class="bar-col"><div class="bar-stack">' + cells + '</div><span class="bar-label">' + esc(c.label) + '</span></div>';
+      }).join('');
+      let axis = '';
+      for (let i = rows; i >= 0; i -= 1) axis += '<span class="bar-axis-label">' + i * b.step + '</span>';
+      return frame('<div class="bar-graph"><div class="bar-axis">' + axis + '</div>' + cols + '</div><p class="board-note">1めもりは ' + b.step + '</p>');
     }
     case 'rod-groups': {
       const rods = n => {

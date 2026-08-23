@@ -286,15 +286,16 @@ function renderAnswer(q) {
   }
   if (q.kind === 'keypad') {
     const keys = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(k => '<button type="button" class="key" data-key="' + k + '">' + k + '</button>').join('');
+    const dotKey = q.decimals ? '<button type="button" class="key op" data-key=".">.</button>' : '';
     return '<div class="keypad-wrap"><div class="key-display">' + (ui.input === '' ? '<span class="ghost">？</span>' : esc(ui.input)) + '</div>' +
-      '<div class="keypad">' + keys + '<button type="button" class="key erase" data-erase>けす</button></div></div>' + commitRow(ui.input !== '');
+      '<div class="keypad">' + keys + dotKey + '<button type="button" class="key erase" data-erase>けす</button></div></div>' + commitRow(ui.input !== '' && ui.input !== '.');
   }
   if (q.kind === 'equation-build') {
     // 2段: ①しきを つくる(＋−キーつき) → ②こたえを いれる。
     // 候補は画面に出さない。文章から数と演算を子どもが取り出す(FB-03)
     const keys = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(k => '<button type="button" class="key" data-key="' + k + '">' + k + '</button>').join('');
     if (ui.eqStep === 'expr') {
-      const ready = /^\d+[＋−×]\d+$/.test(ui.expr);
+      const ready = /^\d+[＋−×÷]\d+$/.test(ui.expr);
       const opKeys = (q.ops || ['＋', '−']).map(op => '<button type="button" class="key op" data-op="' + op + '">' + op + '</button>').join('');
       return '<div class="keypad-wrap">' +
         '<p class="eq-step">しきを つくろう</p>' +
@@ -367,7 +368,7 @@ function collectedAnswer(q) {
 function commit() {
   const q = currentQuestion();
   if (q.kind === 'equation-build' && q.ui.eqStep === 'expr') {
-    const m = q.ui.expr.match(/^(\d+)([＋−×])(\d+)$/);
+    const m = q.ui.expr.match(/^(\d+)([＋−×÷])(\d+)$/);
     const math = q.math;
     let ok = false;
     let reversedSub = false;
@@ -379,6 +380,9 @@ function commit() {
         ok = op === '＋' && ((x === math.a && y === math.b) || (x === math.b && y === math.a));
       } else if (math.kind === 'mul') {
         ok = op === '×' && ((x === math.a && y === math.b) || (x === math.b && y === math.a));
+      } else if (math.kind === 'div') {
+        ok = op === '÷' && x === math.a && y === math.b;
+        reversedSub = op === '÷' && x === math.b && y === math.a;
       } else {
         ok = op === '−' && x === math.a && y === math.b;
         reversedSub = op === '−' && x === math.b && y === math.a;
@@ -393,7 +397,7 @@ function commit() {
       }
     } else {
       q.ui.wrongs += 1;
-      q.ui.hintOverride = reversedSub ? 'ひきざんは おおきい かずから とるよ。じゅんばんを みなおそう。' : null;
+      q.ui.hintOverride = reversedSub ? (math.kind === 'div' ? 'わりざんは わけられる かずが さきだよ。じゅんばんを みなおそう。' : 'ひきざんは おおきい かずから とるよ。じゅんばんを みなおそう。') : null;
       q.ui.feedback = q.ui.wrongs >= 2 ? { kind: 'teach' } : { kind: 'hint' };
     }
     renderPlay();
@@ -524,7 +528,10 @@ root.addEventListener('click', event => {
       const lastNumber = q.ui.expr.match(/(\d*)$/)[1];
       if (lastNumber.length < 3 && q.ui.expr.length < 7) q.ui.expr += t.dataset.key;
     } else if (q.ui.input.length < 5) {
-      q.ui.input += t.dataset.key;
+      const key = t.dataset.key;
+      const okDot = key !== '.' || (q.decimals && !q.ui.input.includes('.') && q.ui.input !== '');
+      const okDigit = key === '.' || !/\.\d$/.test(q.ui.input); // 小数第一位まで
+      if (okDot && okDigit) q.ui.input += key;
     }
     renderPlay();
     return;
@@ -595,7 +602,7 @@ window.__hirameki = {
     if (q.ui.feedback) { nextQuestion(); return; }
     if (q.kind === 'equation-build') {
       q.ui.eqStep = 'expr';
-      q.ui.expr = String(q.math.a) + (q.math.kind === 'add' ? '＋' : q.math.kind === 'mul' ? '×' : '−') + q.math.b;
+      q.ui.expr = String(q.math.a) + ({ add: '＋', mul: '×', div: '÷' }[q.math.kind] || '−') + q.math.b;
       commit();
       if (!q.ui.feedback && q.askAnswer !== false) { q.ui.input = String(q.answer); commit(); }
       return;

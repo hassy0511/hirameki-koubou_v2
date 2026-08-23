@@ -14,6 +14,8 @@ export const POLYS = {
   quad_trap: { points: [[30, 30], [70, 30], [85, 75], [15, 75]], edges: 4, kind: 'quad', right: false },
   quad_kite: { points: [[50, 15], [80, 50], [50, 90], [20, 50]], edges: 4, kind: 'quad', right: false },
   penta: { points: [[50, 12], [88, 42], [72, 88], [28, 88], [12, 42]], edges: 5, kind: 'penta', right: false },
+  tri_iso: { points: [[50, 12], [22, 86], [78, 86]], edges: 3, kind: 'tri', right: false, iso: true },
+  tri_equi: { points: [[50, 10], [11, 78], [89, 78]], edges: 3, kind: 'tri', right: false, iso: true, equi: true },
   curved: { curved: true },
   open_zig: { points: [[15, 80], [40, 25], [65, 70], [90, 30]], open: true }
 };

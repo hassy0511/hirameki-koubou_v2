@@ -17,9 +17,17 @@ import { g2MulStages } from './g2/mul.js';
 import { g2MeasureStages } from './g2/measure.js';
 import { g2ShapeStages } from './g2/shape.js';
 import { g2SolveStages } from './g2/solve.js';
+import { g3NumberStages } from './g3/number.js';
+import { g3MulStages } from './g3/mul.js';
+import { g3DivStages } from './g3/div.js';
+import { g3DecStages } from './g3/dec.js';
+import { g3MeasureStages } from './g3/measure.js';
+import { g3ShapeStages } from './g3/shape.js';
+import { g3SolveStages } from './g3/solve.js';
 
 const GENERATORS = Object.assign({}, numberStages, additionStages, subtractionStages, measureStages, shapeStages, solveStages,
-  g2NumberStages, g2CalcStages, g2MulStages, g2MeasureStages, g2ShapeStages, g2SolveStages);
+  g2NumberStages, g2CalcStages, g2MulStages, g2MeasureStages, g2ShapeStages, g2SolveStages,
+  g3NumberStages, g3MulStages, g3DivStages, g3DecStages, g3MeasureStages, g3ShapeStages, g3SolveStages);
 
 // おさらい・まとめ: どのスロットで どの元ステージを出すか。
 // スロット4は必ず場面問題になるよう、元ステージへ slot=4 を渡す。

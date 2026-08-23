@@ -3,8 +3,9 @@
 
 import { G1 } from './g1.js';
 import { G2 } from './g2.js';
+import { G3 } from './g3.js';
 
-export const COURSES = Object.freeze({ g1: G1, g2: G2 });
+export const COURSES = Object.freeze({ g1: G1, g2: G2, g3: G3 });
 
 export function courseOf(courseId) {
   const course = COURSES[courseId];
